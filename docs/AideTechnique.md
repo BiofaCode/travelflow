@@ -40,3 +40,26 @@ Organisation des dossiers :
 - `pages/` = un écran entier
 - `components/` = bouts réutilisables
 - `data/` = les données
+
+## Router
+
+Avant, le passage liste <-> détail se faisait avec un `useState` dans `App.jsx`
+(`selectedTripId`). Ça marchait mais pas d'URL, pas de bouton retour du
+navigateur, impossible de partager un lien vers un voyage précis.
+
+Remplacé par `react-router-dom` :
+- `main.jsx` : `<App />` est mis dans un `<BrowserRouter>` (une seule fois, tout
+  en haut de l'app).
+- `App.jsx` : `<Routes>` avec une `<Route>` par page. `/` -> Dashboard,
+  `/trips/:id` -> TripDetail. Le `:id` est un paramètre dynamique dans l'URL.
+- `TripDetail.jsx` : ne reçoit plus le voyage en prop, il le retrouve lui-même
+  avec `useParams()` qui lit le `:id` de l'URL, puis `trips.find(...)`.
+  Attention : `id` récupéré dans l'URL est une string, il faut le passer en
+  `Number()` avant de comparer.
+- `Dashboard.jsx` / `Navbar.jsx` : les `onClick` / `<a href>` sont remplacés par
+  des `<Link to="...">`. Avec `<Link>`, la page ne recharge pas (contrairement à
+  un `<a>` classique), seul le contenu change.
+- Piège rencontré : j'avais mis un `return` (cas "voyage introuvable") avant le
+  `useState`. ESLint a bloqué ça : les Hooks doivent être appelés à chaque
+  render, dans le même ordre, jamais après un `if`/`return`. Il faut mettre tous
+  les `useState` tout en haut du composant.

@@ -74,6 +74,7 @@ export const trips = [
         cout: 15,
         notes: "Prendre le tram 15E depuis la Praça da Figueira."
       }
+      
     ]
   }
 ];

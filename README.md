@@ -10,6 +10,7 @@ les placer sur une carte et de suivre le budget.
 
 - React + Vite
 - Tailwind CSS
+- react-router-dom (navigation)
 - react-leaflet + OpenStreetMap (carte)
 - Back-end : à définir (Node/Express + SQLite ou Supabase)
 
@@ -43,7 +44,8 @@ docs/            notes prises pendant le dev
 
 - [x] Setup projet + Tailwind
 - [x] Affichage de la liste des voyages
-- [ ] Page détail d'un voyage (étapes par jour)
+- [x] Page détail d'un voyage (étapes par jour)
+- [x] Navigation entre pages (react-router)
 - [ ] Carte interactive
 - [ ] Budget
 - [ ] Authentification
