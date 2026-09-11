@@ -5,12 +5,22 @@ function formatDate(iso) {
 }
 
 export default function TripCard({ trip }) {
+  const nbSteps = trip.steps ? trip.steps.length : 0;
+
   return (
     <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition">
-      <h3 className="font-bold text-lg text-gray-800">{trip.titre}</h3>
-      <p className="text-gray-500 text-sm">
+      <div className="flex justify-between items-start">
+        <h3 className="font-bold text-lg text-gray-800">{trip.titre}</h3>
+        {/* Petit badge pour indiquer le nombre d'étapes */}
+        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+          {nbSteps} étape{nbSteps > 1 ? "s" : ""}
+        </span>
+      </div>
+
+      <p className="text-gray-500 text-sm mt-1">
         {formatDate(trip.dateDebut)} → {formatDate(trip.dateFin)}
       </p>
+
       <p className="text-blue-600 font-semibold mt-2">{trip.budgetTotal} CHF</p>
     </div>
   );

@@ -1,16 +1,50 @@
-# React + Vite
+# TravelFlow
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Planificateur de voyage réalisé en React dans le cadre du cours de dev web
+(3e année).
 
-Currently, two official plugins are available:
+L'appli permet de créer des voyages, d'y ajouter des étapes jour par jour, de
+les placer sur une carte et de suivre le budget.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Stack
 
-## React Compiler
+- React + Vite
+- Tailwind CSS
+- react-leaflet + OpenStreetMap (carte)
+- Back-end : à définir (Node/Express + SQLite ou Supabase)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Lancer le projet
 
-## Expanding the ESLint configuration
+```
+npm install
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Puis ouvrir l'adresse affichée (par défaut http://localhost:5173).
+
+Autres commandes :
+
+```
+npm run build     # build de production
+npm run lint       # vérif du code
+```
+
+## Structure
+
+```
+src/
+  components/   composants réutilisables (Navbar, TripCard...)
+  pages/         les écrans (Dashboard, TripDetail)
+  data/          données de test en attendant le back-end
+docs/            notes prises pendant le dev
+```
+
+## Avancement
+
+- [x] Setup projet + Tailwind
+- [x] Affichage de la liste des voyages
+- [ ] Page détail d'un voyage (étapes par jour)
+- [ ] Carte interactive
+- [ ] Budget
+- [ ] Authentification
+- [ ] Back-end / base de données
