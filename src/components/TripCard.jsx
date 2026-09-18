@@ -11,17 +11,16 @@ export default function TripCard({ trip }) {
     <div className="bg-white rounded-lg shadow p-4 hover:shadow-md transition">
       <div className="flex justify-between items-start">
         <h3 className="font-bold text-lg text-gray-800">{trip.titre}</h3>
-        {/* Petit badge pour indiquer le nombre d'étapes */}
         <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
           {nbSteps} étape{nbSteps > 1 ? "s" : ""}
         </span>
       </div>
 
       <p className="text-gray-500 text-sm mt-1">
-        {formatDate(trip.dateDebut)} → {formatDate(trip.dateFin)}
+        {formatDate(trip.date_debut)} → {formatDate(trip.date_fin)}
       </p>
 
-      <p className="text-blue-600 font-semibold mt-2">{trip.budgetTotal} CHF</p>
+      <p className="text-blue-600 font-semibold mt-2">{trip.budget_total} CHF</p>
     </div>
   );
 }

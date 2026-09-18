@@ -6,6 +6,7 @@ export default function StepItem({ step }) {
           {step.heure}
         </span>
         <h4 className="font-semibold text-gray-800 mt-1">{step.titre}</h4>
+        {/* notes pas obligatoire, on affiche que si y'en a */}
         {step.notes && (
           <p className="text-sm text-gray-500 mt-1">{step.notes}</p>
         )}

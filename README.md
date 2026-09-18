@@ -12,7 +12,7 @@ les placer sur une carte et de suivre le budget.
 - Tailwind CSS
 - react-router-dom (navigation)
 - react-leaflet + OpenStreetMap (carte)
-- Back-end : à définir (Node/Express + SQLite ou Supabase)
+- Back-end : Supabase (auth + base PostgreSQL)
 
 ## Lancer le projet
 
@@ -35,10 +35,22 @@ npm run lint       # vérif du code
 ```
 src/
   components/   composants réutilisables (Navbar, TripCard...)
-  pages/         les écrans (Dashboard, TripDetail)
-  data/          données de test en attendant le back-end
+  pages/         les écrans (Dashboard, TripDetail, Login, Signup)
+  context/       AuthContext (qui est connecté)
+  hooks/         useAuth
+  lib/           client Supabase
+  data/          données de test (encore utilisées par TripDetail pour l'instant)
 docs/            notes prises pendant le dev
 ```
+
+## Configuration
+
+Créer un fichier `.env.local` à la racine (non commit) avec :
+```
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_PUBLISHABLE_KEY=...
+```
+(valeurs dans Project Settings → Data API sur le dashboard Supabase)
 
 ## Avancement
 
@@ -46,7 +58,9 @@ docs/            notes prises pendant le dev
 - [x] Affichage de la liste des voyages
 - [x] Page détail d'un voyage (étapes par jour)
 - [x] Navigation entre pages (react-router)
+- [x] Back-end / base de données (Supabase, tables trips + steps, RLS)
+- [x] Authentification (inscription, connexion, déconnexion)
+- [ ] Espace personnel complet (migrer TripDetail vers Supabase)
+- [ ] Voyages (créer/modifier/supprimer un voyage)
 - [ ] Carte interactive
 - [ ] Budget
-- [ ] Authentification
-- [ ] Back-end / base de données
