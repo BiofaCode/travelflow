@@ -35,11 +35,10 @@ npm run lint       # vérif du code
 ```
 src/
   components/   composants réutilisables (Navbar, TripCard...)
-  pages/         les écrans (Dashboard, TripDetail, Login, Signup)
+  pages/         les écrans (Dashboard, TripDetail, Login, Signup, NewTrip)
   context/       AuthContext (qui est connecté)
   hooks/         useAuth
   lib/           client Supabase
-  data/          données de test (encore utilisées par TripDetail pour l'instant)
 docs/            notes prises pendant le dev
 ```
 
@@ -60,7 +59,9 @@ VITE_SUPABASE_PUBLISHABLE_KEY=...
 - [x] Navigation entre pages (react-router)
 - [x] Back-end / base de données (Supabase, tables trips + steps, RLS)
 - [x] Authentification (inscription, connexion, déconnexion)
-- [ ] Espace personnel complet (migrer TripDetail vers Supabase)
-- [ ] Voyages (créer/modifier/supprimer un voyage)
+- [x] Espace personnel (Dashboard + TripDetail lisent les vraies données Supabase)
+- [x] Créer un voyage
+- [ ] Modifier / supprimer un voyage
+- [ ] Ajouter une étape depuis l'interface
 - [ ] Carte interactive
 - [ ] Budget

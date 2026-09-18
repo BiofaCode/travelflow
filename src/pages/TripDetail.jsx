@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { trips } from "../data/trips";
+import { supabase } from "../lib/supabaseClient";
 import StepItem from "../components/StepItem";
 
 function formatDate(iso) {
@@ -9,12 +9,33 @@ function formatDate(iso) {
 }
 
 export default function TripDetail() {
-  const { id } = useParams(); // id vient de l'URL, c'est une string
-  const trip = trips.find((t) => t.id === Number(id));
+  const { id } = useParams();
+  const [trip, setTrip] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [jourActif, setJourActif] = useState("");
 
-  // faut appeler useState avant le if(!trip) sinon eslint gueule (rules of hooks)
-  const joursDisponibles = trip ? [...new Set(trip.steps.map((s) => s.jour))] : [];
-  const [jourActif, setJourActif] = useState(joursDisponibles[0] || "");
+  useEffect(() => {
+    async function fetchTrip() {
+      const { data, error } = await supabase
+        .from("trips")
+        .select("*, steps(*)")
+        .eq("id", id)
+        .single();
+
+      if (error) {
+        console.error(error);
+      } else {
+        setTrip(data);
+        const joursDisponibles = [...new Set(data.steps.map((s) => s.jour))];
+        setJourActif(joursDisponibles[0] || "");
+      }
+      setLoading(false);
+    }
+
+    fetchTrip();
+  }, [id]);
+
+  if (loading) return <p className="text-gray-400 text-center mt-12">Chargement...</p>;
 
   if (!trip) {
     return (
@@ -27,6 +48,7 @@ export default function TripDetail() {
     );
   }
 
+  const joursDisponibles = [...new Set(trip.steps.map((s) => s.jour))];
   const etapesDuJour = trip.steps.filter((s) => s.jour === jourActif);
 
   return (
@@ -41,10 +63,10 @@ export default function TripDetail() {
       <header className="mb-6 mt-4 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <h1 className="text-2xl font-bold text-gray-900">{trip.titre}</h1>
         <p className="text-gray-500 text-sm mt-1">
-          {formatDate(trip.dateDebut)} → {formatDate(trip.dateFin)}
+          {formatDate(trip.date_debut)} → {formatDate(trip.date_fin)}
         </p>
         <p className="text-blue-600 font-semibold text-lg mt-2">
-          Budget total : {trip.budgetTotal} CHF
+          Budget total : {trip.budget_total} CHF
         </p>
       </header>
 

@@ -29,7 +29,15 @@ export default function Dashboard() {
 
    return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Mes Voyages</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">Mes Voyages</h2>
+        <Link
+          to="/trips/new"
+          className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+        >
+          + Nouveau voyage
+        </Link>
+      </div>
 
       {trips.length === 0 ? (
         <p className="text-gray-400 italic">

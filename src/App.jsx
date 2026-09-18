@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import TripDetail from "./pages/TripDetail";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import NewTrip from "./pages/NewTrip";
 
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/trips/:id" element={<TripDetail />} />
+          <Route path="/trips/new" element={<NewTrip/>} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup /> }/>
           {/* route "*" = tout le reste, sert de 404 */}

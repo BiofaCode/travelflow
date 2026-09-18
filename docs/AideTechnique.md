@@ -257,8 +257,60 @@ Piège de nommage : les colonnes SQL sont en snake_case (`date_debut`,
 renvoie les données avec exactement les noms de colonnes de la table. Fallu
 adapter `TripCard.jsx` (`trip.date_debut` au lieu de `trip.dateDebut`, etc).
 
-**Pas encore fait** : `TripDetail.jsx` utilise toujours `data/trips.js` (le
-mock) — la migration de la page détail + le formulaire de création de voyage
-sont pour la prochaine étape. Vu qu'on n'a pas encore de formulaire, le
-Dashboard affiche "Aucun voyage pour l'instant." avec un vrai compte — c'est le
-comportement attendu.
+## GRANT vs RLS
+
+Erreur rencontrée en créant le premier voyage : `permission denied for table
+trips`. Pas une erreur RLS (celle-là dit "new row violates row-level security
+policy"), mais une couche encore avant : le rôle `authenticated` n'avait tout
+simplement pas le droit de toucher la table, indépendamment des lignes.
+
+- **GRANT** = le rôle a-t-il le droit de faire ça sur la table, en général.
+- **RLS/policy** = d'accord il a le droit, mais sur quelles lignes précisément.
+
+Supabase configure ça normalement tout seul, mais il a fallu l'ajouter à la
+main :
+```sql
+grant select, insert, update, delete on trips to authenticated;
+grant select, insert, update, delete on steps to authenticated;
+grant usage, select on sequence trips_id_seq to authenticated;
+grant usage, select on sequence steps_id_seq to authenticated;
+```
+(les grants sur les sequences sont nécessaires parce que `id` est auto-généré)
+
+## Formulaire de création de voyage
+
+`pages/NewTrip.jsx` : un seul state objet pour les 4 champs du formulaire,
+au lieu d'un `useState` par champ :
+```js
+const [form, setForm] = useState({ titre: "", date_debut: "", date_fin: "", budget_total: "" });
+
+function handleChange(e) {
+  setForm({ ...form, [e.target.name]: e.target.value });
+}
+```
+- `[e.target.name]` : nom de propriété calculé à partir de l'attribut `name` de
+  l'input. Chaque input a `name="..."` + `value`/`onChange` partagés.
+- `{ ...form, ... }` : jamais modifier le state directement, on recopie tout
+  et on écrase juste le champ concerné.
+- `user_id: user.id` (via `useAuth()`) ajouté à la volée avant l'insert, sinon
+  la policy RLS refuse (elle attend `user_id = auth.uid()`).
+
+Piège de routing : le chemin dans `<Route path="...">` et celui dans
+`<Link to="...">` doivent être identiques caractère pour caractère
+(`/trips/new` partout, pas `/trip/new` d'un côté).
+
+## TripDetail branché sur les vraies données
+
+Même principe que Dashboard, mais avec 2 nouveautés :
+
+- **Requête avec jointure** : `supabase.from("trips").select("*, steps(*)").eq("id", id).single()`.
+  Grâce à la clé étrangère `steps.trip_id -> trips.id`, Supabase remonte les
+  steps du voyage directement dans `data.steps`, en une seule requête.
+  `.eq(...)` filtre par id, `.single()` dit qu'on attend un seul résultat (pas
+  un tableau).
+- **`useEffect(..., [id])`** au lieu de `[]` : si on navigue d'un voyage à
+  l'autre sans que le composant soit détruit/recréé par React Router, il faut
+  quand même relancer la requête. Avec `id` en dépendance, l'effet se
+  redéclenche à chaque changement d'id dans l'URL.
+
+`data/trips.js` (le mock) n'est plus utilisé nulle part depuis cette étape.
