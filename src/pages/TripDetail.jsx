@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import StepItem from "../components/StepItem";
 
@@ -10,6 +10,8 @@ function formatDate(iso) {
 
 export default function TripDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [jourActif, setJourActif] = useState("");
@@ -34,6 +36,21 @@ export default function TripDetail() {
 
     fetchTrip();
   }, [id]);
+
+  async function handleDelete() {
+    const confirme = window.confirm("Supprimer ce voyage définitivement ?");
+    if (!confirme) return;
+
+    // les steps liées partent automatiquement (on delete cascade défini en SQL)
+    const { error } = await supabase.from("trips").delete().eq("id", id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    navigate("/");
+  }
 
   if (loading) return <p className="text-gray-400 text-center mt-12">Chargement...</p>;
 
@@ -68,6 +85,12 @@ export default function TripDetail() {
         <p className="text-blue-600 font-semibold text-lg mt-2">
           Budget total : {trip.budget_total} CHF
         </p>
+        <button
+          onClick={handleDelete}
+          className="text-red-600 text-sm font-semibold mt-3 hover:underline"
+        >
+          Supprimer ce voyage
+        </button>
       </header>
 
       <nav className="flex gap-2 border-b border-gray-200 pb-2 mb-6 overflow-x-auto">

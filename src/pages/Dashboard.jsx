@@ -26,8 +26,7 @@ export default function Dashboard() {
 
   if (loading) return <p className="text-gray-400">Chargement...</p>;
 
-
-   return (
+  return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Mes Voyages</h2>
