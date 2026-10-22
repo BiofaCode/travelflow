@@ -16,6 +16,15 @@ export default function TripDetail() {
   const [loading, setLoading] = useState(true);
   const [jourActif, setJourActif] = useState("");
 
+  const [newStep, setNewStep] = useState({
+    titre: "",
+    jour: "",
+    heure: "",
+    cout: "",
+    notes: "",
+  });
+  const [stepError, setStepError] = useState("");
+
   useEffect(() => {
     async function fetchTrip() {
       const { data, error } = await supabase
@@ -37,6 +46,19 @@ export default function TripDetail() {
     fetchTrip();
   }, [id]);
 
+  // utilisée après un ajout/suppression de step, pour rafraîchir la liste
+  // (séparée du fetch initial ci-dessus : eslint n'aime pas qu'un useEffect
+  // appelle une fonction "partagée" qui fait du setState)
+  async function refreshTrip() {
+    const { data, error } = await supabase
+      .from("trips")
+      .select("*, steps(*)")
+      .eq("id", id)
+      .single();
+
+    if (!error) setTrip(data);
+  }
+
   async function handleDelete() {
     const confirme = window.confirm("Supprimer ce voyage définitivement ?");
     if (!confirme) return;
@@ -50,6 +72,44 @@ export default function TripDetail() {
     }
 
     navigate("/");
+  }
+
+  function handleStepChange(e) {
+    setNewStep({ ...newStep, [e.target.name]: e.target.value });
+  }
+
+  async function handleAddStep(e) {
+    e.preventDefault();
+    setStepError("");
+
+    const { error } = await supabase.from("steps").insert({
+      ...newStep,
+      cout: Number(newStep.cout), // "" -> 0 automatiquement avec Number()
+      trip_id: id,
+    });
+
+    if (error) {
+      setStepError(error.message);
+      return;
+    }
+
+    await refreshTrip();
+    setJourActif(newStep.jour); // pour voir tout de suite l'étape qu'on vient d'ajouter
+    setNewStep({ titre: "", jour: "", heure: "", cout: "", notes: "" });
+  }
+
+  async function handleDeleteStep(stepId) {
+    const confirme = window.confirm("Supprimer cette étape ?");
+    if (!confirme) return;
+
+    const { error } = await supabase.from("steps").delete().eq("id", stepId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await refreshTrip();
   }
 
   if (loading) return <p className="text-gray-400 text-center mt-12">Chargement...</p>;
@@ -85,6 +145,12 @@ export default function TripDetail() {
         <p className="text-blue-600 font-semibold text-lg mt-2">
           Budget total : {trip.budget_total} CHF
         </p>
+        <Link
+          to={`/trips/${id}/edit`}
+          className="text-blue-600 text-sm font-semibold mt-3 mr-4 hover:underline"
+        >
+          Modifier
+        </Link>
         <button
           onClick={handleDelete}
           className="text-red-600 text-sm font-semibold mt-3 hover:underline"
@@ -114,13 +180,73 @@ export default function TripDetail() {
 
       <section className="space-y-3">
         {etapesDuJour.length > 0 ? (
-          etapesDuJour.map((step) => <StepItem key={step.id} step={step} />)
+          etapesDuJour.map((step) => (
+            <StepItem key={step.id} step={step} onDelete={handleDeleteStep} />
+          ))
         ) : (
           <p className="text-gray-400 italic text-sm">
             Aucune étape prévue pour cette journée.
           </p>
         )}
       </section>
+
+      <div className="mt-6 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+        <h3 className="font-semibold text-gray-800 mb-3">Ajouter une étape</h3>
+
+        {stepError && <p className="text-red-600 text-sm mb-3">{stepError}</p>}
+
+        <form onSubmit={handleAddStep} className="flex flex-col gap-2">
+          <input
+            type="text"
+            name="titre"
+            placeholder="Titre de l'étape"
+            value={newStep.titre}
+            onChange={handleStepChange}
+            required
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <div className="flex gap-2">
+            <input
+              type="date"
+              name="jour"
+              min={trip.date_debut}
+              max={trip.date_fin}
+              value={newStep.jour}
+              onChange={handleStepChange}
+              required
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm flex-1"
+            />
+            <input
+              type="time"
+              name="heure"
+              value={newStep.heure}
+              onChange={handleStepChange}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm flex-1"
+            />
+          </div>
+          <input
+            type="number"
+            name="cout"
+            placeholder="Coût (CHF)"
+            value={newStep.cout}
+            onChange={handleStepChange}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <textarea
+            name="notes"
+            placeholder="Notes (optionnel)"
+            value={newStep.notes}
+            onChange={handleStepChange}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <button
+            type="submit"
+            className="bg-blue-600 text-white text-sm font-semibold rounded-lg py-2 hover:bg-blue-700 transition"
+          >
+            Ajouter l'étape
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

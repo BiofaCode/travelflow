@@ -314,3 +314,75 @@ Même principe que Dashboard, mais avec 2 nouveautés :
   redéclenche à chaque changement d'id dans l'URL.
 
 `data/trips.js` (le mock) n'est plus utilisé nulle part depuis cette étape.
+
+## Supprimer un voyage
+
+Bouton dans `TripDetail.jsx` :
+```js
+async function handleDelete() {
+  const confirme = window.confirm("Supprimer ce voyage définitivement ?");
+  if (!confirme) return;
+
+  const { error } = await supabase.from("trips").delete().eq("id", id);
+  ...
+  navigate("/");
+}
+```
+- `window.confirm(...)` : boîte de dialogue native du navigateur, renvoie
+  `true`/`false` selon le bouton cliqué.
+- `.delete().eq("id", id)` : supprime la ligne avec cet id. La RLS s'applique
+  aussi ici, donc impossible de supprimer le voyage de quelqu'un d'autre même
+  en trafiquant la requête.
+- Grâce au `on delete cascade` mis sur `steps.trip_id` en créant la table, les
+  steps du voyage sont supprimées automatiquement, pas besoin de le faire à la
+  main.
+
+## Modifier un voyage
+
+`pages/EditTrip.jsx` : même formulaire que `NewTrip`, mais en 2 temps.
+
+- `form` démarre à `null` (pas un objet vide) le temps de charger le voyage
+  existant via un `useEffect`. `if (!form) return <p>Chargement...</p>` évite
+  de planter en lisant `form.titre` avant que la réponse arrive.
+- `.update({ ... }).eq("id", id)` au lieu de `.insert()` : modifie la ligne
+  existante plutôt que d'en créer une nouvelle.
+- Redirige vers `/trips/:id` (le détail) après sauvegarde, pas vers `/`.
+
+## Ajouter une étape
+
+Formulaire ajouté directement dans `TripDetail.jsx` (pas une page séparée),
+avec son propre state `newStep` (même pattern objet + `handleChange`
+générique que les autres formulaires).
+
+- `min={trip.date_debut}` / `max={trip.date_fin}` sur l'input `type="date"` :
+  empêche de choisir une date hors des dates du voyage, directement géré par
+  le navigateur.
+- Après l'insert dans `steps`, on refait la requête `trips` +
+  `select("*, steps(*)")` pour récupérer la liste à jour, plutôt que de
+  recharger toute la page.
+- `setJourActif(newStep.jour)` juste après : bascule automatiquement sur
+  l'onglet du jour où l'étape vient d'être ajoutée, pour la voir tout de suite
+  (même si c'est un nouveau jour qui n'avait pas encore d'onglet).
+- `required` sur les champs titre/jour : validation native du navigateur
+  (même mécanisme que `type="email"` vu avant, bloque silencieusement si
+  vide).
+
+## Supprimer une étape
+
+`StepItem` reste un composant "muet" (juste de l'affichage) : il reçoit une
+fonction `onDelete` en prop et se contente de l'appeler au clic
+(`onClick={() => onDelete(step.id)}`). La vraie logique (confirmation, appel
+Supabase) reste dans `TripDetail`, qui la passe en prop — même principe de
+"remonter l'état" que `Dashboard`/`onSelectTrip` au tout début du projet.
+
+Piège eslint (react-hooks v7) : appeler depuis un `useEffect` une fonction
+définie ailleurs dans le composant (donc pas locale à l'effet) qui fait du
+`setState` est maintenant averti/bloqué (`react-hooks/set-state-in-effect` +
+`exhaustive-deps`). Du coup 2 fonctions séparées :
+- le `fetchTrip` imbriqué **dans** le `useEffect`, pour le chargement initial
+  (inchangé depuis le début) ;
+- un `refreshTrip` à part, appelé seulement depuis `handleAddStep` et
+  `handleDeleteStep` (jamais depuis un `useEffect`).
+
+Légère duplication de la requête entre les deux, mais plus simple que de
+sacrifier au `useCallback`/dépendances pour un seul composant.

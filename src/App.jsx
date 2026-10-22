@@ -6,7 +6,7 @@ import TripDetail from "./pages/TripDetail";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NewTrip from "./pages/NewTrip";
-
+import EditTrip from "./pages/EditTrip";
 
 export default function App() {
   return (
@@ -17,9 +17,10 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/trips/:id" element={<TripDetail />} />
-          <Route path="/trips/new" element={<NewTrip/>} />
+          <Route path="/trips/new" element={<NewTrip />} />
+          <Route path="/trips/:id/edit" element={<EditTrip />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup /> }/>
+          <Route path="/signup" element={<Signup />} />
           {/* route "*" = tout le reste, sert de 404 */}
           <Route path="*" element={<p>Page introuvable.</p>} />
         </Routes>

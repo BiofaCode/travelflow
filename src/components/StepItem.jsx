@@ -1,4 +1,4 @@
-export default function StepItem({ step }) {
+export default function StepItem({ step, onDelete }) {
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex justify-between items-start">
       <div>
@@ -11,9 +11,18 @@ export default function StepItem({ step }) {
           <p className="text-sm text-gray-500 mt-1">{step.notes}</p>
         )}
       </div>
-      <span className="font-semibold text-gray-700 whitespace-nowrap ml-4">
-        {step.cout} CHF
-      </span>
+      <div className="flex flex-col items-end gap-1 ml-4">
+        <span className="font-semibold text-gray-700 whitespace-nowrap">
+          {step.cout} CHF
+        </span>
+        {/* onDelete vient du parent (TripDetail), StepItem ne fait qu'appeler la fonction */}
+        <button
+          onClick={() => onDelete(step.id)}
+          className="text-xs text-red-600 hover:underline"
+        >
+          Supprimer
+        </button>
+      </div>
     </div>
   );
 }
