@@ -1,46 +1,205 @@
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { useEffect, useRef } from "react";
+import L from "leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  CircleMarker,
+  Polyline,
+  Popup,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
+import { Map as MapIcon, Plus } from "lucide-react";
+import "../lib/leafletIcons.js";
+import { formatHeure } from "../lib/format";
 
-export default function TripMap({ steps, centreDestination }) {
-  const etapesAvecCoordonnees = steps.filter((s) => s.latitude && s.longitude);
+const ROSE = "#f43f5e";
 
-  // priorité à la 1ère étape géolocalisée ; sinon on retombe sur le centre
-  // de la destination du voyage (géocodée via Nominatim), pour avoir quand
-  // même une carte utile avant d'avoir ajouté la moindre étape
-  const centre = etapesAvecCoordonnees.length > 0
-    ? [etapesAvecCoordonnees[0].latitude, etapesAvecCoordonnees[0].longitude]
-    : centreDestination;
+// une icône par numéro, gardée en cache pour ne pas la recréer à chaque render
+const iconesNumero = {};
+function iconeNumero(n) {
+  if (!iconesNumero[n]) {
+    iconesNumero[n] = L.divIcon({
+      className: "",
+      html: `<div class="flex items-center justify-center w-7 h-7 rounded-full bg-rose-500 text-white text-xs font-bold border-2 border-slate-950 shadow-lg">${n}</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+      popupAnchor: [0, -14],
+    });
+  }
+  return iconesNumero[n];
+}
 
-  if (!centre) {
+const iconePointChoisi = L.divIcon({
+  className: "",
+  html: '<div class="w-5 h-5 rounded-full border-[3px] border-white bg-rose-500/50 shadow-lg animate-pulse"></div>',
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+});
+
+// heure null -> à la fin de la journée
+function trierParHeure(a, b) {
+  if (!a.heure) return 1;
+  if (!b.heure) return -1;
+  return a.heure.localeCompare(b.heure);
+}
+
+function AjusterVue({ points, centre, cle }) {
+  const map = useMap();
+  // les points changent de référence à chaque render, on les garde dans une ref
+  // pour ne recadrer que quand "cle" change
+  const pointsRef = useRef(points);
+  const centreRef = useRef(centre);
+
+  useEffect(() => {
+    pointsRef.current = points;
+    centreRef.current = centre;
+  });
+
+  useEffect(() => {
+    const pts = pointsRef.current;
+    if (pts.length > 1) {
+      map.fitBounds(pts, { padding: [40, 40], maxZoom: 15 });
+    } else if (pts.length === 1) {
+      map.setView(pts[0], 14);
+    } else if (centreRef.current) {
+      map.setView(centreRef.current, 12);
+    }
+  }, [map, cle]);
+
+  return null;
+}
+
+function ClicCarte({ onMapClick }) {
+  useMapEvents({
+    click(e) {
+      onMapClick({ lat: e.latlng.lat, lon: e.latlng.lng });
+    },
+  });
+  return null;
+}
+
+export default function TripMap({
+  steps,
+  jourActif,
+  centreDestination,
+  suggestions = [],
+  suggestionSurvolee,
+  onAjouterSuggestion,
+  onMapClick,
+  pointChoisi,
+  className = "h-[300px]",
+}) {
+  const etapes = steps.filter((s) => s.latitude != null && s.longitude != null);
+  const etapesDuJour = etapes.filter((s) => s.jour === jourActif).sort(trierParHeure);
+  const autresEtapes = etapes.filter((s) => s.jour !== jourActif);
+
+  const pointsDuJour = etapesDuJour.map((s) => [s.latitude, s.longitude]);
+  const tousLesPoints = etapes.map((s) => [s.latitude, s.longitude]);
+  const pointsVue = pointsDuJour.length > 0 ? pointsDuJour : tousLesPoints;
+
+  if (pointsVue.length === 0 && !centreDestination) {
     return (
-      <p className="text-slate-500 italic text-sm">
-        Aucune étape avec des coordonnées pour l'instant.
-      </p>
+      <div className={`card flex flex-col items-center justify-center gap-2 text-slate-500 text-sm text-center px-6 ${className}`}>
+        <MapIcon size={28} />
+        <p>Ajoute une destination au voyage pour afficher la carte.</p>
+      </div>
     );
   }
 
+  const centreInitial = pointsVue[0] ?? centreDestination;
+  const cleVue = `${jourActif}|${pointsVue.length}|${centreDestination?.join(",") ?? ""}`;
+
   return (
-    <div className="rounded-lg overflow-hidden border border-slate-800">
-      <MapContainer
-        center={centre}
-        zoom={etapesAvecCoordonnees.length > 0 ? 12 : 10}
-        style={{ height: "300px", width: "100%" }}
-      >
-        {/* vraies tuiles OpenStreetMap (gratuites, sans clé) + filtre CSS pour l'effet sombre, voir index.css */}
+    <div className={`relative isolate rounded-2xl overflow-hidden border border-slate-800 ${className}`}>
+      <MapContainer center={centreInitial} zoom={12} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
+        {/* tuiles OSM classiques + filtre sombre (index.css) */}
         <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
+          attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           className="map-tiles-dark"
         />
-        {etapesAvecCoordonnees.map((step) => (
-          <Marker key={step.id} position={[step.latitude, step.longitude]}>
+
+        <AjusterVue points={pointsVue} centre={centreDestination} cle={cleVue} />
+        {onMapClick && <ClicCarte onMapClick={onMapClick} />}
+
+        {autresEtapes.map((step) => (
+          <CircleMarker
+            key={step.id}
+            center={[step.latitude, step.longitude]}
+            radius={5}
+            bubblingMouseEvents={false}
+            pathOptions={{ color: "#64748b", weight: 1, fillColor: "#94a3b8", fillOpacity: 0.6 }}
+          >
             <Popup>
               <strong>{step.titre}</strong>
               <br />
-              {step.heure}
+              <span className="text-slate-400 text-xs">
+                {step.jour} {formatHeure(step.heure)}
+              </span>
+            </Popup>
+          </CircleMarker>
+        ))}
+
+        {suggestions.map((lieu) => {
+          const survole = lieu.id === suggestionSurvolee;
+          return (
+            <CircleMarker
+              key={lieu.id}
+              center={[lieu.lat, lieu.lon]}
+              radius={survole ? 10 : 6}
+              bubblingMouseEvents={false}
+              pathOptions={{
+                color: "#fda4af",
+                weight: 2,
+                fillColor: ROSE,
+                fillOpacity: survole ? 0.9 : 0.15,
+              }}
+            >
+              <Popup>
+                <strong>{lieu.titre}</strong>
+                {onAjouterSuggestion && (
+                  <button
+                    type="button"
+                    onClick={() => onAjouterSuggestion(lieu)}
+                    className="mt-2 flex items-center gap-1 text-xs font-semibold text-rose-400 hover:text-rose-300"
+                  >
+                    <Plus size={14} />
+                    Ajouter au planning
+                  </button>
+                )}
+              </Popup>
+            </CircleMarker>
+          );
+        })}
+
+        {pointsDuJour.length > 1 && (
+          <Polyline positions={pointsDuJour} pathOptions={{ color: ROSE, weight: 3, opacity: 0.8, dashArray: "6 8" }} />
+        )}
+
+        {etapesDuJour.map((step, i) => (
+          <Marker key={step.id} position={[step.latitude, step.longitude]} icon={iconeNumero(i + 1)}>
+            <Popup>
+              <strong>{step.titre}</strong>
+              {step.heure && (
+                <>
+                  <br />
+                  <span className="text-slate-400 text-xs">{formatHeure(step.heure)}</span>
+                </>
+              )}
             </Popup>
           </Marker>
         ))}
+
+        {pointChoisi && <Marker position={pointChoisi} icon={iconePointChoisi} />}
       </MapContainer>
+
+      {onMapClick && (
+        <p className="absolute bottom-2 left-2 z-[500] pointer-events-none rounded-lg bg-slate-950/80 border border-slate-800 px-2.5 py-1 text-xs text-slate-400">
+          Clique sur la carte pour placer une étape
+        </p>
+      )}
     </div>
   );
 }

@@ -1,94 +1,59 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../hooks/useAuth";
+import TripForm from "../components/TripForm";
 
 export default function NewTrip() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    titre: "",
-    destination: "",
-    date_debut: "",
-    date_fin: "",
-    budget_total: "",
-  });
   const [error, setError] = useState("");
+  const [searchParams] = useSearchParams();
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
+  // pré-remplissage depuis l'URL : /trips/new?destination=Rome&debut=2027-03-10&fin=2027-03-14
+  const valeursUrl = {
+    destination: searchParams.get("destination") || "",
+    date_debut: searchParams.get("debut") || "",
+    date_fin: searchParams.get("fin") || "",
+  };
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(form) {
     setError("");
 
-    const { error } = await supabase.from("trips").insert({
-      ...form,
-      budget_total: Number(form.budget_total), // les inputs renvoient toujours des strings
-      user_id: user.id,
-    });
+    // .select().single() pour récupérer l'id du voyage créé
+    const { data, error } = await supabase
+      .from("trips")
+      .insert({
+        ...form,
+        budget_total: Number(form.budget_total), // les inputs renvoient toujours des strings
+        user_id: user.id,
+      })
+      .select()
+      .single();
 
     if (error) {
       setError(error.message);
       return;
     }
 
-    navigate("/");
+    navigate(`/trips/${data.id}`);
   }
 
   return (
-    <div className="max-w-sm mx-auto mt-12 bg-slate-900 p-6 rounded-xl border border-slate-800">
-      <h1 className="text-xl font-bold text-slate-100 mb-4">Nouveau voyage</h1>
+    <div className="max-w-2xl mx-auto">
+      <Link
+        to="/"
+        className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-rose-400 hover:text-rose-300 transition"
+      >
+        <ArrowLeft size={16} /> Retour à mes voyages
+      </Link>
 
-      {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          type="text"
-          name="titre"
-          placeholder="Titre du voyage"
-          value={form.titre}
-          onChange={handleChange}
-          className="bg-slate-950 border border-slate-800 text-slate-100 placeholder:text-slate-500 rounded-lg px-3 py-2"
-        />
-        <input
-          type="text"
-          name="destination"
-          placeholder="Destination (ville, pays)"
-          value={form.destination}
-          onChange={handleChange}
-          className="bg-slate-950 border border-slate-800 text-slate-100 placeholder:text-slate-500 rounded-lg px-3 py-2"
-        />
-        <input
-          type="date"
-          name="date_debut"
-          value={form.date_debut}
-          onChange={handleChange}
-          className="bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-3 py-2"
-        />
-        <input
-          type="date"
-          name="date_fin"
-          value={form.date_fin}
-          onChange={handleChange}
-          className="bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-3 py-2"
-        />
-        <input
-          type="number"
-          name="budget_total"
-          placeholder="Budget (CHF)"
-          value={form.budget_total}
-          onChange={handleChange}
-          className="bg-slate-950 border border-slate-800 text-slate-100 placeholder:text-slate-500 rounded-lg px-3 py-2"
-        />
-        <button
-          type="submit"
-          className="bg-rose-500 text-white rounded-lg py-2 font-semibold hover:bg-rose-600 transition"
-        >
-          Créer
-        </button>
-      </form>
+      <div className="card p-5 sm:p-8">
+        <h1 className="text-2xl font-bold text-slate-100 mb-1">Nouveau voyage</h1>
+        <p className="text-sm text-slate-400 mb-6">Les étapes s'ajoutent ensuite depuis la page du voyage.</p>
+        <TripForm valeursInitiales={valeursUrl} onSubmit={handleSubmit} texteBouton="Créer le voyage" erreur={error} />
+      </div>
     </div>
   );
 }

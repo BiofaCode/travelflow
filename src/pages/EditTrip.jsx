@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, PencilLine } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
+import TripForm from "../components/TripForm";
+import Spinner from "../components/Spinner";
 
 export default function EditTrip() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState(null); // null tant que pas encore chargé
+  const [valeurs, setValeurs] = useState(null); // null tant que pas encore chargé
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchTrip() {
@@ -20,7 +24,7 @@ export default function EditTrip() {
       if (error) {
         setError(error.message);
       } else {
-        setForm({
+        setValeurs({
           titre: data.titre,
           destination: data.destination || "", // null pour les voyages créés avant ce champ
           date_debut: data.date_debut,
@@ -28,17 +32,13 @@ export default function EditTrip() {
           budget_total: data.budget_total,
         });
       }
+      setLoading(false);
     }
 
     fetchTrip();
   }, [id]);
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(form) {
     setError("");
 
     // update au lieu d'insert : modifie la ligne existante plutôt que d'en créer une
@@ -55,58 +55,37 @@ export default function EditTrip() {
     navigate(`/trips/${id}`);
   }
 
-  if (!form) return <p className="text-slate-500 text-center mt-12">Chargement...</p>;
+  if (loading) return <Spinner />;
 
   return (
-    <div className="max-w-sm mx-auto mt-12 bg-slate-900 p-6 rounded-xl border border-slate-800">
-      <h1 className="text-xl font-bold text-slate-100 mb-4">Modifier le voyage</h1>
+    <div className="max-w-2xl mx-auto">
+      <Link to={`/trips/${id}`} className="btn-secondary mb-5 px-4 py-2">
+        <ArrowLeft size={16} /> Retour au voyage
+      </Link>
 
-      {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          type="text"
-          name="titre"
-          value={form.titre}
-          onChange={handleChange}
-          className="bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-3 py-2"
-        />
-        <input
-          type="text"
-          name="destination"
-          placeholder="Destination (ville, pays)"
-          value={form.destination}
-          onChange={handleChange}
-          className="bg-slate-950 border border-slate-800 text-slate-100 placeholder:text-slate-500 rounded-lg px-3 py-2"
-        />
-        <input
-          type="date"
-          name="date_debut"
-          value={form.date_debut}
-          onChange={handleChange}
-          className="bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-3 py-2"
-        />
-        <input
-          type="date"
-          name="date_fin"
-          value={form.date_fin}
-          onChange={handleChange}
-          className="bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-3 py-2"
-        />
-        <input
-          type="number"
-          name="budget_total"
-          value={form.budget_total}
-          onChange={handleChange}
-          className="bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-3 py-2"
-        />
-        <button
-          type="submit"
-          className="bg-rose-500 text-white rounded-lg py-2 font-semibold hover:bg-rose-600 transition"
-        >
-          Enregistrer
-        </button>
-      </form>
+      <div className="card p-5 sm:p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <span className="grid place-items-center w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-br from-rose-500 to-violet-500 text-white shadow-lg shadow-rose-500/30">
+            <PencilLine size={20} />
+          </span>
+          <div>
+            <h1 className="section-title">
+              Modifier le <span className="text-gradient">voyage</span>
+            </h1>
+            <p className="text-sm text-slate-400">Change les infos principales, tes étapes restent intactes.</p>
+          </div>
+        </div>
+        {valeurs ? (
+          <TripForm
+            valeursInitiales={valeurs}
+            onSubmit={handleSubmit}
+            texteBouton="Enregistrer"
+            erreur={error}
+          />
+        ) : (
+          <p className="text-red-400 text-sm">{error || "Ce voyage n'existe pas."}</p>
+        )}
+      </div>
     </div>
   );
 }
