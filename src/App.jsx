@@ -10,7 +10,7 @@ import EditTrip from "./pages/EditTrip";
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-950">
       <Navbar />
 
       <main className="p-6 max-w-5xl mx-auto">
@@ -22,7 +22,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           {/* route "*" = tout le reste, sert de 404 */}
-          <Route path="*" element={<p>Page introuvable.</p>} />
+          <Route path="*" element={<p className="text-slate-400">Page introuvable.</p>} />
         </Routes>
       </main>
     </div>

@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+body {
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  /* dit au navigateur d'adapter les widgets natifs (date, number...) au thème sombre,
+     sinon leurs icônes/texte restent calés pour un fond clair et deviennent illisibles */
+  color-scheme: dark;
+}
+
+/* effet "carte sombre" sur les tuiles OpenStreetMap classiques, sans service tiers :
+   invert retourne toutes les couleurs, hue-rotate corrige les teintes (sinon le bleu
+   de l'eau devient orange), brightness/contrast ajustent le rendu final */
+.map-tiles-dark {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+}

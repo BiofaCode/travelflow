@@ -386,3 +386,151 @@ définie ailleurs dans le composant (donc pas locale à l'effet) qui fait du
 
 Légère duplication de la requête entre les deux, mais plus simple que de
 sacrifier au `useCallback`/dépendances pour un seul composant.
+
+## Carte Leaflet
+
+`npm install leaflet react-leaflet`. Versions utilisées : leaflet 1.9,
+react-leaflet 5 (compatible React 19).
+
+3 trucs à mettre en place avant que ça marche, tous dans `main.jsx` :
+- `import 'leaflet/dist/leaflet.css'` : sans ce CSS, la carte s'affiche toute
+  cassée (tuiles mal alignées).
+- `import './lib/leafletIcons.js'` : juste pour exécuter son contenu, pas
+  d'import nommé. Ce fichier corrige un bug connu : avec un bundler (Vite,
+  webpack...), les icônes par défaut des marqueurs Leaflet ne se chargent pas
+  (chemins d'image cassés par le build). Le fix réassigne les URLs manuellement
+  via `L.Icon.Default.mergeOptions(...)`.
+
+`components/TripMap.jsx` :
+- Filtre les steps qui ont `latitude`/`longitude` (beaucoup n'en ont pas pour
+  l'instant, champs optionnels).
+- `<MapContainer>` **doit** avoir une hauteur explicite en style inline
+  (`style={{ height: "300px" }}`) — sans ça sa hauteur vaut 0 et rien ne
+  s'affiche, piège classique de Leaflet.
+- `center` attend `[latitude, longitude]`.
+- `<Marker><Popup>...</Popup></Marker>` : le popup s'ouvre tout seul au clic
+  sur le marqueur, pas besoin de gérer l'événement.
+
+Coordonnées saisies à la main pour l'instant (2 inputs `number` avec
+`step="any"` pour autoriser les décimales, ajoutés au formulaire d'étape dans
+`TripDetail`). Vide → `null` dans l'insert (pas `0`, qui est un vrai point sur
+Terre, dans l'Atlantique). Le clic sur la carte pour placer un point n'est pas
+fait, ce sera pour plus tard si le temps le permet.
+
+Piège rencontré : après avoir ajouté les 2 champs au formulaire, le `useState`
+de reset après soumission (`setNewStep({ titre: "", ... })`) ne les
+contenait pas encore — ça aurait rendu les inputs latitude/longitude
+"non contrôlés" juste après un ajout (React aurait averti dans la console).
+Il faut que l'objet de reset ait exactement les mêmes clés que l'objet initial.
+
+Note scope : la saisie reste manuelle volontairement (pas de recherche de lieu
+par nom / suggestions d'activités type Wanderlog). Le cahier des charges
+demande explicitement "coordonnées, manuelle ou clic carte" — la saisie
+manuelle suffit pour le MVP. Une recherche par nom avec Nominatim (API gratuite
+d'OpenStreetMap) resterait un bonus possible en fin de projet, pas une
+obligation.
+
+## Budget (barre de progression)
+
+Dernière fonctionnalité du MVP. Pas de nouvelle requête Supabase ni de colonne
+en plus : le total dépensé se calcule à partir de `trip.steps`, déjà chargé.
+
+```js
+const totalDepense = trip.steps.reduce((somme, step) => somme + step.cout, 0);
+```
+`.reduce()` : transforme un tableau en une seule valeur. `0` = valeur de
+départ, puis à chaque étape `somme + step.cout` devient la nouvelle somme.
+
+`components/BudgetBar.jsx` : composant à part (réutilisable), reçoit juste
+`depense` et `budget` en props.
+- `Math.min((depense / budget) * 100, 100)` : plafonne à 100% pour que la barre
+  ne déborde pas si le budget est dépassé.
+- Largeur de la barre en `style={{ width: ... }}` plutôt qu'en classe Tailwind :
+  seul moyen d'avoir un pourcentage calculé dynamiquement (Tailwind ne peut
+  générer que des classes connues à l'avance).
+- Couleur rouge + message si `depense > budget`.
+
+Réactif "gratuitement" : comme c'est calculé à chaque rendu à partir de
+`trip.steps`, ajouter/supprimer une étape met à jour la barre automatiquement,
+sans code spécifique pour ça.
+
+## Refonte visuelle (thème sombre)
+
+Inspiré de Wanderlog/TripkyGo, mais en gardant le scope raisonnable (pas d'IA,
+pas de recherche de lieu, pas de photos/réservations — juste le visuel et la
+structure).
+
+- **Police** : Plus Jakarta Sans (Google Fonts), chargée via `<link>` dans
+  `index.html` (2 `<link rel="preconnect">` pour accélérer le chargement, puis
+  le lien vers le CSS de la police). Appliquée globalement dans `index.css`
+  via `font-family` sur `body`.
+- **Palette** : fini le blanc/gris clair, tout en `slate-950` (fond),
+  `slate-900` (cartes), `slate-800` (bordures), `slate-100`/`slate-400`
+  (texte), et **rose-500** comme couleur d'accent (remplace le bleu partout :
+  boutons, liens, prix).
+- **`color-scheme: dark`** dans `index.css` (sur `body`) : indispensable avec
+  des inputs natifs (`date`, `number`, `time`). Sans ça, les icônes/texte de
+  ces champs restent calés sur un rendu "fond clair" du navigateur et
+  deviennent presque invisibles sur fond sombre. Piège facile à louper.
+- **Carte Leaflet** : essayé d'abord des tuiles sombres CartoDB
+  (`basemaps.cartocdn.com/dark_all/...`) — **erreur "API key required"**,
+  CARTO a changé sa politique, ce n'est plus libre d'accès comme avant.
+  Reviendu aux vraies tuiles OpenStreetMap standard (gratuites, sans clé,
+  conforme au cahier des charges), et simulé l'effet sombre avec un **filtre
+  CSS** sur les tuiles (`.map-tiles-dark` dans `index.css`) :
+  ```css
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+  ```
+  `invert(1)` retourne toutes les couleurs (noir ↔ blanc), `hue-rotate(180deg)`
+  corrige les teintes que l'inversion fausse (sinon l'eau bleue devient
+  orange), `brightness`/`contrast` ajustent le rendu. Appliqué uniquement aux
+  tuiles via la prop `className` du `<TileLayer>` — les marqueurs/popups
+  vivent dans des calques Leaflet séparés, donc pas affectés par le filtre
+  (toujours de vraies couleurs).
+- **Leçon retenue** : vérifier qu'un service tiers "gratuit" l'est vraiment
+  avant de l'utiliser, plutôt que de faire confiance à une supposition.
+
+Pas de bascule clair/sombre : un seul thème fixe, pas demandé par le cahier
+des charges et ça aurait ajouté de la complexité pour rien.
+
+## Suggestions de lieux touristiques (en cours)
+
+Décision prise pour remplacer la saisie manuelle des coordonnées : chercher
+automatiquement des lieux touristiques autour de la destination du voyage,
+avec des outils OpenStreetMap gratuits (pas de clé API, pas de service payant).
+Découpé en 3 sous-étapes :
+
+- **A (fait)** : colonne `destination` (text, nullable) ajoutée à `trips` en
+  SQL, champ ajouté dans `NewTrip`/`EditTrip`, affiché sur `TripCard` et
+  `TripDetail`. `data.destination || ""` dans `EditTrip` : les voyages créés
+  avant ce champ ont `destination = null` en base, il faut l'intercepter avant
+  de le mettre dans un input contrôlé (même piège que vu avant pour
+  latitude/longitude).
+- **B (fait)** : géocoder la destination avec **Nominatim** (recherche OSM
+  gratuite, pas de clé) pour obtenir un point central.
+  - `lib/nominatim.js` : `geocodeDestination(destination)`, un simple
+    `fetch` vers `nominatim.openstreetmap.org/search?q=...&format=json`.
+    Teste bien avant de coder dedans avec `curl` pour vérifier le format de
+    réponse (lat/lon renvoyés en **strings**, fallu les passer en `Number()`).
+  - Dans `TripDetail.jsx`, un **2ᵉ `useEffect`** séparé (pas mélangé avec celui
+    du chargement du voyage), dépendant de `trip?.destination` seulement (pas
+    de tout l'objet `trip`) pour éviter de re-géocoder à chaque rafraîchissement
+    après ajout/suppression d'étape.
+  - Piège eslint rencontré : un `setState` **synchrone** (pas dans un
+    `.then()`) directement dans le corps d'un effet est maintenant bloqué
+    (`react-hooks/set-state-in-effect`), même pour un simple `return` anticipé
+    qui remettait le state à `null`. Solution : un `return;` tout court sans
+    toucher au state si rien à géocoder — seul le `setState` dans le callback
+    asynchrone (`.then(...)`) est autorisé.
+  - **Bonus visible tout de suite** : `TripMap` accepte maintenant une prop
+    `centreDestination` — si aucune étape n'a encore de coordonnées, la carte
+    se centre quand même sur la destination géocodée plutôt que d'afficher
+    juste du texte. Zoom moins serré (10 au lieu de 12) dans ce cas, vu qu'on
+    n'a qu'un point large (la ville), pas un lieu précis.
+- **C (à venir)** : chercher les lieux touristiques autour de ce point avec
+  **Overpass API** (requêtes sur la base OSM), afficher des suggestions
+  cliquables dans le formulaire d'ajout d'étape.
+
+Alternative plus simple évoquée mais pas retenue : juste une recherche par nom
+(Nominatim seul, sans Overpass) — aurait réglé le problème de saisie sans
+suggestions automatiques. Choix assumé d'aller sur la version plus ambitieuse.

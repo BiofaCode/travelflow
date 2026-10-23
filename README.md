@@ -34,11 +34,11 @@ npm run lint       # vérif du code
 
 ```
 src/
-  components/   composants réutilisables (Navbar, TripCard...)
+  components/   composants réutilisables (Navbar, TripCard, TripMap, BudgetBar...)
   pages/         les écrans (Dashboard, TripDetail, Login, Signup, NewTrip, EditTrip)
   context/       AuthContext (qui est connecté)
   hooks/         useAuth
-  lib/           client Supabase
+  lib/           client Supabase, fix icônes Leaflet
 docs/            notes prises pendant le dev
 ```
 
@@ -62,5 +62,8 @@ VITE_SUPABASE_PUBLISHABLE_KEY=...
 - [x] Espace personnel (Dashboard + TripDetail lisent les vraies données Supabase)
 - [x] CRUD voyages complet (créer, modifier, supprimer)
 - [x] Ajouter/supprimer une étape depuis l'interface
-- [ ] Carte interactive
-- [ ] Budget
+- [x] Carte interactive (coordonnées saisies à la main, clic pour placer un point pas encore fait)
+- [x] Budget (barre de progression, calcul réactif à partir des étapes)
+
+**MVP du cahier des charges terminé.** Reste : responsive/finitions, tests,
+README/documentation finale, préparation de la soutenance.

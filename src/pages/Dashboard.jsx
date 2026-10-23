@@ -24,22 +24,22 @@ export default function Dashboard() {
     fetchTrips();
   }, []);
 
-  if (loading) return <p className="text-gray-400">Chargement...</p>;
+  if (loading) return <p className="text-slate-500">Chargement...</p>;
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Mes Voyages</h2>
+        <h2 className="text-2xl font-bold text-slate-100">Mes Voyages</h2>
         <Link
           to="/trips/new"
-          className="bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          className="bg-rose-500 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-rose-600 transition"
         >
           + Nouveau voyage
         </Link>
       </div>
 
       {trips.length === 0 ? (
-        <p className="text-gray-400 italic">
+        <p className="text-slate-500 italic">
           Aucun voyage pour l'instant.
         </p>
       ) : (

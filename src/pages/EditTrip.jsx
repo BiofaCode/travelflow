@@ -22,6 +22,7 @@ export default function EditTrip() {
       } else {
         setForm({
           titre: data.titre,
+          destination: data.destination || "", // null pour les voyages créés avant ce champ
           date_debut: data.date_debut,
           date_fin: data.date_fin,
           budget_total: data.budget_total,
@@ -54,13 +55,13 @@ export default function EditTrip() {
     navigate(`/trips/${id}`);
   }
 
-  if (!form) return <p className="text-gray-400 text-center mt-12">Chargement...</p>;
+  if (!form) return <p className="text-slate-500 text-center mt-12">Chargement...</p>;
 
   return (
-    <div className="max-w-sm mx-auto mt-12 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-      <h1 className="text-xl font-bold text-gray-900 mb-4">Modifier le voyage</h1>
+    <div className="max-w-sm mx-auto mt-12 bg-slate-900 p-6 rounded-xl border border-slate-800">
+      <h1 className="text-xl font-bold text-slate-100 mb-4">Modifier le voyage</h1>
 
-      {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+      {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
@@ -68,32 +69,40 @@ export default function EditTrip() {
           name="titre"
           value={form.titre}
           onChange={handleChange}
-          className="border border-gray-200 rounded-lg px-3 py-2"
+          className="bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-3 py-2"
+        />
+        <input
+          type="text"
+          name="destination"
+          placeholder="Destination (ville, pays)"
+          value={form.destination}
+          onChange={handleChange}
+          className="bg-slate-950 border border-slate-800 text-slate-100 placeholder:text-slate-500 rounded-lg px-3 py-2"
         />
         <input
           type="date"
           name="date_debut"
           value={form.date_debut}
           onChange={handleChange}
-          className="border border-gray-200 rounded-lg px-3 py-2"
+          className="bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-3 py-2"
         />
         <input
           type="date"
           name="date_fin"
           value={form.date_fin}
           onChange={handleChange}
-          className="border border-gray-200 rounded-lg px-3 py-2"
+          className="bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-3 py-2"
         />
         <input
           type="number"
           name="budget_total"
           value={form.budget_total}
           onChange={handleChange}
-          className="border border-gray-200 rounded-lg px-3 py-2"
+          className="bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-3 py-2"
         />
         <button
           type="submit"
-          className="bg-blue-600 text-white rounded-lg py-2 font-semibold hover:bg-blue-700 transition"
+          className="bg-rose-500 text-white rounded-lg py-2 font-semibold hover:bg-rose-600 transition"
         >
           Enregistrer
         </button>
