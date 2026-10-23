@@ -69,7 +69,7 @@ export default function Home() {
       <section className="pt-6 sm:pt-12">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <div>
-            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-[1.05]">
+            <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-50 leading-[1.05]">
               Planifie tes
               <br />
               <span className="bg-gradient-to-r from-rose-500 to-violet-500 bg-clip-text text-transparent">
@@ -119,10 +119,10 @@ export default function Home() {
       <section className="rounded-[2rem] bg-gradient-to-br from-violet-950 via-slate-900 to-slate-950 border border-violet-900/40 p-6 sm:p-12 overflow-hidden">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-slate-200">
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-50/10 px-4 py-1.5 text-sm font-semibold text-slate-200">
               👋 Bienvenue sur TravelFlow
             </span>
-            <h2 className="mt-5 text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
+            <h2 className="mt-5 text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-50">
               Organise ton voyage{" "}
               <span className="bg-gradient-to-r from-rose-500 to-violet-500 bg-clip-text text-transparent">
                 sans prise de tête
@@ -144,7 +144,7 @@ export default function Home() {
 
       {/* ---------- fonctionnalités ---------- */}
       <section>
-        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white text-center">
+        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-50 text-center">
           Tout ce qu'il faut pour{" "}
           <span className="bg-gradient-to-r from-rose-500 to-violet-500 bg-clip-text text-transparent">
             bien partir
@@ -163,7 +163,7 @@ export default function Home() {
 
       {/* ---------- comment ça marche ---------- */}
       <section>
-        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white text-center">
+        <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-50 text-center">
           Comment ça marche ?
         </h2>
 

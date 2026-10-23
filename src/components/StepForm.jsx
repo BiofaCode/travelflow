@@ -1,9 +1,51 @@
+import { useCallback, useMemo } from "react";
 import { MapPin, Plus, Save, X } from "lucide-react";
 import { formatJourCourt } from "../lib/dates";
+import { suggererLieuxProches } from "../lib/photon";
+import DestinationInput from "./DestinationInput";
 
 // le state du formulaire est dans TripDetail (la carte et Explorer doivent pouvoir le remplir)
 // modeEdition : même formulaire pour modifier une étape existante (on peut aussi changer son jour)
-export default function StepForm({ step, onChange, onSubmit, jours, erreur, enCours, modeEdition = false, onAnnuler }) {
+// centre : point de la destination (pour chercher les lieux autour)
+// lieuxPopulaires : les lieux Wikipédia, proposés dès qu'on clique dans le titre
+export default function StepForm({
+  step,
+  onChange,
+  onSubmit,
+  jours,
+  erreur,
+  enCours,
+  modeEdition = false,
+  onAnnuler,
+  centre = null,
+  lieuxPopulaires = [],
+}) {
+  // useCallback : sinon une nouvelle fonction à chaque render relancerait la recherche
+  const chercherLieux = useCallback(
+    (texte, signal) => suggererLieuxProches(texte, centre, signal),
+    [centre]
+  );
+
+  // même forme que les résultats de Photon pour la liste déroulante
+  const populaires = useMemo(
+    () =>
+      lieuxPopulaires.map((l) => ({
+        id: l.id,
+        nom: l.titre,
+        detail: l.description,
+        type: l.categorie,
+        lat: l.lat,
+        lon: l.lon,
+        label: l.titre,
+      })),
+    [lieuxPopulaires]
+  );
+
+  // lieu choisi dans la liste : titre + position sur la carte d'un coup
+  function choisirLieu(lieu) {
+    onChange({ ...step, titre: lieu.nom, latitude: lieu.lat, longitude: lieu.lon });
+  }
+
   function handleChange(e) {
     onChange({ ...step, [e.target.name]: e.target.value });
   }
@@ -31,16 +73,36 @@ export default function StepForm({ step, onChange, onSubmit, jours, erreur, enCo
 
       <div>
         <label htmlFor="step-titre" className="label">Titre</label>
-        <input
-          id="step-titre"
-          type="text"
-          name="titre"
-          placeholder="Ex : Visite du Colisée"
-          value={step.titre}
-          onChange={handleChange}
-          required
-          className="input"
-        />
+        {centre ? (
+          <>
+            <DestinationInput
+              id="step-titre"
+              name="titre"
+              placeholder="Ex : Colisée, musée, pizzeria..."
+              value={step.titre}
+              onChange={(texte) => onChange({ ...step, titre: texte })}
+              onSelect={choisirLieu}
+              rechercher={chercherLieux}
+              suggestionsVides={populaires}
+              titreVides="Lieux populaires"
+              required
+            />
+            <p className="mt-1.5 text-xs text-slate-500">
+              Choisis un lieu dans la liste pour le placer directement sur la carte.
+            </p>
+          </>
+        ) : (
+          <input
+            id="step-titre"
+            type="text"
+            name="titre"
+            placeholder="Ex : Visite du Colisée"
+            value={step.titre}
+            onChange={handleChange}
+            required
+            className="input"
+          />
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

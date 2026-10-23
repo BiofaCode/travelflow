@@ -13,13 +13,13 @@ export default function Footer() {
         </div>
 
         <nav aria-label="Liens du pied de page" className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-          <Link to="/" className="text-slate-400 hover:text-white transition">
+          <Link to="/" className="text-slate-400 hover:text-slate-50 transition">
             Accueil
           </Link>
-          <Link to="/" className="text-slate-400 hover:text-white transition">
+          <Link to="/" className="text-slate-400 hover:text-slate-50 transition">
             Mes voyages
           </Link>
-          <Link to="/login" className="text-slate-400 hover:text-white transition">
+          <Link to="/login" className="text-slate-400 hover:text-slate-50 transition">
             Connexion
           </Link>
         </nav>

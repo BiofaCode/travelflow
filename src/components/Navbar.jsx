@@ -4,13 +4,15 @@ import { LogOut, Menu, Plus, X } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { supabase } from "../lib/supabaseClient";
 import Logo from "./Logo";
+import ThemeToggle from "./ThemeToggle";
 
 // style des liens en pilule (actif = fond un peu plus clair)
+// slate-50 plutôt que white : il s'inverse en mode clair (voir index.css)
 function classeLien({ isActive }) {
   return `px-4 py-2 rounded-full text-sm font-semibold transition ${
     isActive
-      ? "bg-slate-800/80 text-white"
-      : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+      ? "bg-slate-800/80 text-slate-50"
+      : "text-slate-400 hover:text-slate-50 hover:bg-slate-800/50"
   }`;
 }
 
@@ -50,6 +52,7 @@ export default function Navbar() {
 
         {/* actions à droite (desktop) */}
         <div className="hidden md:flex items-center gap-2 min-w-0">
+          <ThemeToggle />
           {user ? (
             <>
               <span className="hidden lg:block text-sm text-slate-500 truncate max-w-[200px]">
@@ -72,7 +75,7 @@ export default function Navbar() {
             <>
               <Link
                 to="/signup"
-                className="text-sm font-semibold text-slate-400 hover:text-white px-3 py-2"
+                className="text-sm font-semibold text-slate-400 hover:text-slate-50 px-3 py-2"
               >
                 Inscription
               </Link>
@@ -100,6 +103,8 @@ export default function Navbar() {
       {menuOuvert && (
         <div id="menu-mobile" className="md:hidden border-t border-slate-800 bg-slate-950/95">
           <div className="px-4 py-4 flex flex-col gap-1">
+            <ThemeToggle avecTexte />
+
             <NavLink to="/" end onClick={fermerMenu} className={classeLien}>
               {user ? "Mes voyages" : "Accueil"}
             </NavLink>

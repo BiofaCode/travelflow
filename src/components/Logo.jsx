@@ -14,7 +14,7 @@ export default function Logo({ taille = "md" }) {
         <Plane size={petit ? 15 : 18} className="-rotate-12" aria-hidden="true" />
       </span>
       <span className={petit ? "text-base" : "text-xl"}>
-        <span className="text-white">travel</span>
+        <span className="text-slate-50">travel</span>
         <span className="bg-gradient-to-r from-rose-500 to-violet-500 bg-clip-text text-transparent">
           flow
         </span>

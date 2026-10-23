@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
+import { MapContainer, CircleMarker, Popup, useMap } from "react-leaflet";
+import FondCarte from "./FondCarte";
 import "../lib/leafletIcons.js";
 
 // recadre la carte pour voir tous les points d'un coup
@@ -37,11 +38,7 @@ export default function DashboardMap({ trips }) {
   return (
     <div className="card overflow-hidden h-[260px] sm:h-[320px] ring-1 ring-rose-500/10">
       <MapContainer center={positions[0]} zoom={4} scrollWheelZoom={false} style={{ height: "100%", width: "100%" }}>
-        <TileLayer
-          attribution="&copy; OpenStreetMap contributors"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          className="map-tiles-dark"
-        />
+        <FondCarte />
         {points.map((p) => (
           <CircleMarker
             key={p.key}

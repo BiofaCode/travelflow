@@ -490,10 +490,10 @@ structure).
 - **Leçon retenue** : vérifier qu'un service tiers "gratuit" l'est vraiment
   avant de l'utiliser, plutôt que de faire confiance à une supposition.
 
-Pas de bascule clair/sombre : un seul thème fixe, pas demandé par le cahier
-des charges et ça aurait ajouté de la complexité pour rien.
+Au début pas de bascule clair/sombre (un seul thème). Ajoutée plus tard, voir
+"Mode clair / sombre" plus bas.
 
-## Suggestions de lieux touristiques (en cours)
+## Suggestions de lieux touristiques
 
 Décision prise pour remplacer la saisie manuelle des coordonnées : chercher
 automatiquement des lieux touristiques autour de la destination du voyage,
@@ -527,10 +527,205 @@ Découpé en 3 sous-étapes :
     se centre quand même sur la destination géocodée plutôt que d'afficher
     juste du texte. Zoom moins serré (10 au lieu de 12) dans ce cas, vu qu'on
     n'a qu'un point large (la ville), pas un lieu précis.
-- **C (à venir)** : chercher les lieux touristiques autour de ce point avec
-  **Overpass API** (requêtes sur la base OSM), afficher des suggestions
-  cliquables dans le formulaire d'ajout d'étape.
+- **C (fait, mais pas avec Overpass)** : au début prévu avec **Overpass API**
+  (requêtes sur la base OSM). En testant : erreurs 406, 502 et timeouts très
+  souvent, le serveur public est saturé. Pas fiable pour une démo.
+  Remplacé par l'**API de recherche de Wikipédia** (gratuite, sans clé,
+  `origin=*` pour que le navigateur ait le droit de l'appeler) :
+  - `gsrsearch: "nearcoord:8km,lat,lon"` = pages Wikipédia autour du point,
+    classées par pertinence, donc les lieux connus sortent en premier.
+  - Première version avec `geosearch` : que des trucs au hasard juste à côté
+    (arrêts de bus, rues...). Et `colimit` par défaut = 10, donc la plupart des
+    pages n'avaient pas de coordonnées → fallu mettre `colimit: "max"`.
+  - Filtre avec 2 regex : ce qui ressemble à un lieu (musée, église, parc...)
+    et ce qu'on exclut (clubs, batailles, gares, universités...). Piège :
+    `tour` matchait "Tourisme", corrigé avec `tour`.
+  - On cherche en **français ET en anglais** (`Promise.allSettled`, si une
+    langue plante on garde l'autre), parce qu'en français c'est vide hors
+    francophonie (Tokyo : presque rien). On enlève les doublons (même endroit à
+    ~150 m près).
+  - Testé : Rome 24 lieux, Lisbonne 13, Tokyo 7.
 
-Alternative plus simple évoquée mais pas retenue : juste une recherche par nom
-(Nominatim seul, sans Overpass) — aurait réglé le problème de saisie sans
-suggestions automatiques. Choix assumé d'aller sur la version plus ambitieuse.
+## Grosse refonte (design + fonctionnalités)
+
+Fait en découpant le travail en 3 parties en parallèle (carte/API, design,
+fonctionnalités), chacune sur des fichiers différents pour pas se marcher
+dessus. Avant de commencer on a fixé les props que les composants se passent
+(ex : ce que `TripDetail` donne à `TripMap`), comme ça chaque partie pouvait
+avancer sans attendre l'autre.
+
+### Nouveaux petits fichiers utilitaires
+- `lib/dates.js` : `formatDate`, `formatJourCourt` ("mer. 10 mars"),
+  `listerJours(debut, fin)` (tous les jours du voyage), `aujourdhui()`. Tout
+  en **UTC** sinon selon le fuseau horaire une date peut reculer d'un jour.
+- `lib/format.js` : `formatCHF` (séparateur de milliers suisse) et
+  `formatHeure` (Postgres renvoie "09:30:00", on garde "09:30").
+- Classes dans `index.css` avec `@apply` (`.card`, `.input`, `.label`,
+  `.btn-primary`...) : avant chaque input avait 10 classes Tailwind copiées
+  collées partout, maintenant une seule.
+
+### Page d'un voyage
+- Planning à gauche, carte à droite (sur mobile la carte passe au-dessus avec
+  `order-first`). Onglets **Planning / Explorer / Budget**.
+- Les onglets de jours affichent **tous** les jours du voyage (`listerJours`)
+  et plus seulement ceux qui ont déjà des étapes.
+- Le jour actif est **dérivé** au lieu d'être mis à jour dans un effet :
+  ```js
+  const jourActif = jours.includes(jourChoisi) ? jourChoisi : jours[0];
+  ```
+  Pas de `setState` dans un `useEffect` → eslint content, et c'est plus simple.
+- Plus de latitude/longitude à taper : on clique sur la carte
+  (`useMapEvents` de react-leaflet) ou on ajoute un lieu depuis Explorer.
+- Modifier une étape : même formulaire, en mode édition (`update` au lieu de
+  `insert`). Changer le jour dans le select = déplacer l'étape.
+- Menu "..." : dupliquer le voyage (insert du voyage puis de ses étapes),
+  imprimer (`window.print()` + classes `print:hidden` / `hidden print:block`
+  de Tailwind pour n'imprimer que l'itinéraire), copier le lien.
+- Dans `App.jsx`, `<TripDetail key={id} />` : quand on passe d'un voyage à un
+  autre (après "Dupliquer" par ex.), React garde le même composant et donc les
+  anciens states. Avec une `key` différente il le recrée à zéro.
+
+### Carte
+- Marqueurs numérotés pour le jour choisi (`L.divIcon` avec du HTML),
+  reliés par une `Polyline` dans l'ordre des heures. Les autres jours en petits
+  cercles gris.
+- Recadrage automatique : petit composant enfant qui utilise `useMap()` et
+  fait `fitBounds` sur les points. Il ne recadre que si le jour ou le nombre de
+  points change, sinon la carte bougerait à chaque clic.
+- Une carte globale sur le Dashboard avec toutes les étapes de tous les voyages.
+
+### Dashboard
+- Bug corrigé : le nombre d'étapes était toujours 0 parce qu'on faisait
+  `select("*")`. Maintenant `select("*, steps(cout, latitude, longitude)")`.
+- Stats, sections "À venir" / "Passés", recherche et tri.
+
+### Accueil (style TripkyGo)
+- Page publique si on n'est pas connecté (`/` affiche `Home` ou `Dashboard`
+  selon `useAuth`). Mise en page inspirée de TripkyGo mais illustration et
+  textes faits par nous (pas le droit de reprendre leurs images).
+- `RequireAuth` : composant qui renvoie vers `/login` si pas connecté, posé
+  autour des pages privées dans `App.jsx`.
+
+### Performances
+- `React.lazy` + `Suspense` sur `TripDetail` et la carte du Dashboard :
+  Leaflet est lourd (~160 ko), il n'est chargé que quand on en a besoin. Dans
+  le build on voit bien un fichier `TripDetail-xxx.js` séparé.
+
+## Autocomplétion de la destination
+
+Quand on tape "to" on veut voir Tokyo, Toronto, Toscane... Nominatim n'est pas
+fait pour ça (et il demande max 1 requête par seconde). On utilise **Photon**
+(photon.komoot.io), c'est aussi basé sur OpenStreetMap, gratuit, sans clé, et
+fait exprès pour l'autocomplétion.
+
+- `lib/photon.js` : `suggererDestinations(texte)` → `{ nom, detail, type, lat, lon, label }`.
+  `lang=fr` pour avoir "Italie" et pas "Italia", `osm_tag=place` pour garder
+  seulement les villes / pays / régions (pas les gares ou les magasins).
+- `components/DestinationInput.jsx` : l'input avec la liste déroulante.
+  - On attend **300 ms** sans frappe avant de chercher (`setTimeout` dans
+    l'effet + `clearTimeout` dans le cleanup). Sinon une requête par lettre.
+  - `AbortController` pour annuler l'ancienne requête si on retape entre-temps,
+    sinon une vieille réponse peut arriver après la nouvelle et l'écraser.
+  - Flèches haut/bas + Entrée + Échap au clavier, `role="combobox"` pour les
+    lecteurs d'écran.
+- Utilisé dans la barre de création et dans le formulaire de modification.
+
+## Création de voyage façon TripkyGo
+
+Une seule barre : **destination, dates, voyageurs, Créer**. Le titre est
+généré ("Voyage à Rome") et le budget vaut 0, on les change après dans
+"Modifier". Plus rapide que l'ancien formulaire avec 5 champs.
+
+- `TripSearchBar.jsx` : la barre, utilisée sur l'accueil et sur `/trips/new`.
+  Depuis l'accueil on passe les valeurs dans l'URL
+  (`/trips/new?destination=Rome&debut=...&voyageurs=2`) et `NewTrip` les relit
+  avec `useSearchParams`.
+- `VoyageursInput.jsx` : compteur avec boutons − / + (entre 1 et 20).
+- Nouvelle colonne en base :
+  ```sql
+  alter table trips add column voyageurs integer not null default 1;
+  ```
+  `default 1` : les voyages déjà créés ont automatiquement 1 voyageur.
+- Dans l'onglet Budget : budget et dépenses **par personne** quand on est
+  plusieurs.
+
+## Plus d'activités dans Explorer
+
+- Filtres élargis (stades, brasseries, quartiers, points de vue...) et rayon
+  de 10 km.
+- Chaque lieu a une **catégorie** (musée, monument, religieux, nature,
+  loisirs) trouvée avec des regex sur la description → filtres en pilules.
+- **Recherche par mot-clé** : `"voiture nearcoord:15km,lat,lon"`. Là on ne
+  filtre plus avec la liste de mots "lieu", l'utilisateur sait ce qu'il
+  cherche. Testé à Munich : "voiture" → Musée BMW, Deutsches Museum
+  Verkehrszentrum... ; à Tokyo : "temple" → Sensō-ji, Zōjō-ji.
+
+## Mode clair / sombre
+
+Tout le site est écrit avec des classes `slate-*` (`bg-slate-950`,
+`text-slate-100`...). Réécrire chaque composant avec `dark:` partout aurait
+été énorme. L'astuce : en **Tailwind v4** chaque couleur est une variable CSS
+(`--color-slate-950`...). En mode clair, on **inverse l'échelle** dans
+`index.css` :
+
+```css
+:root.light {
+  --color-slate-950: #f4f6fb; /* le fond devient clair */
+  --color-slate-100: #0f172a; /* le texte devient foncé */
+  /* ... */
+}
+```
+
+Du coup `bg-slate-950` = fond foncé en sombre, fond clair en clair, sans
+toucher aux composants.
+
+- Seuls pièges : les `text-white` posés sur le fond de page (devenus blanc sur
+  blanc) → remplacés par `text-slate-50`. Le blanc sur un dégradé rose reste
+  `text-white`.
+- Le choix est gardé dans `localStorage`. Un petit script dans `index.html`
+  pose la classe `light` **avant** que React démarre, sinon on voit un flash
+  sombre au chargement. Par défaut on suit le réglage de l'ordi
+  (`prefers-color-scheme`).
+- Carte : en clair on enlève le filtre `invert` sur les tuiles.
+- `hooks/useTheme.js` : il y a deux boutons (navbar + menu mobile), il faut
+  qu'ils soient toujours d'accord → `useSyncExternalStore` qui écoute la classe
+  de `<html>` au lieu d'un `useState` dans chaque bouton.
+
+## Carte plus jolie (fonds Esri)
+
+L'ancien rendu (tuiles OSM + filtre `invert` en CSS) faisait des couleurs un
+peu bizarres. Retesté CARTO : toujours une image "API KEY REQUIRED" à la place
+des tuiles (on l'a vu en ouvrant l'image téléchargée avec `curl`, le code HTTP
+était 200 donc on ne le voit pas sans regarder l'image !).
+
+Pris les fonds **Esri** (gratuits, sans clé, juste l'attribution à afficher) :
+- sombre : `Canvas/World_Dark_Gray_Base` + une 2e couche
+  `World_Dark_Gray_Reference` par-dessus qui contient seulement les noms
+  (rues, villes). Deux `<TileLayer>` l'un sur l'autre.
+- clair : `World_Street_Map`, plus coloré.
+- `components/FondCarte.jsx` choisit selon le thème (`useTheme`), utilisé par
+  `TripMap` et `DashboardMap`. Attention l'ordre est `{z}/{y}/{x}` chez Esri
+  (et pas `{z}/{x}/{y}` comme OSM).
+
+Marqueurs en forme d'épingle : un carré avec 3 coins arrondis tourné de 45°
+(`.carte-pin` dans `index.css`), le numéro à l'intérieur tourné dans l'autre
+sens pour rester droit. Le trajet du jour = 2 `Polyline` : une large et
+transparente (halo) + une fine en pointillés.
+
+## Suggestions de lieux dans le titre d'une étape
+
+Quand on clique dans le titre du formulaire d'étape, ça propose direct les
+lieux populaires (ceux de Wikipédia). Si on tape, ça cherche autour de la
+destination avec **Photon** (`suggererLieuxProches` dans `lib/photon.js`) :
+"colis" → Colisée, "musee" → les musées de Rome, "pizza" → les pizzerias.
+- `lat` et `lon` dans l'URL : Photon met en avant ce qui est proche.
+- On jette ce qui est à plus de ~50 km (homonyme dans un autre pays) et les
+  doublons (Photon renvoie souvent le bâtiment + le point).
+- En choisissant un lieu, le titre ET la position sont remplis → l'épingle
+  apparaît sur la carte sans avoir à cliquer.
+
+Réutilisé le même composant que pour la destination (`DestinationInput`) en
+lui ajoutant 2 props : `rechercher` (quelle fonction de recherche utiliser) et
+`suggestionsVides` (ce qu'on montre avant de taper). Piège : la fonction
+passée dans `rechercher` doit être dans un `useCallback`, sinon elle change à
+chaque render et l'effet de recherche se relance en boucle.

@@ -30,6 +30,7 @@ export default function EditTrip() {
           date_debut: data.date_debut,
           date_fin: data.date_fin,
           budget_total: data.budget_total,
+          voyageurs: data.voyageurs || 1, // 1 par défaut si la colonne est vide
         });
       }
       setLoading(false);
@@ -44,7 +45,7 @@ export default function EditTrip() {
     // update au lieu d'insert : modifie la ligne existante plutôt que d'en créer une
     const { error } = await supabase
       .from("trips")
-      .update({ ...form, budget_total: Number(form.budget_total) })
+      .update({ ...form, budget_total: Number(form.budget_total), voyageurs: Number(form.voyageurs) || 1 })
       .eq("id", id);
 
     if (error) {

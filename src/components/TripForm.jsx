@@ -1,6 +1,8 @@
 import { useState } from "react";
+import DestinationInput from "./DestinationInput";
+import VoyageursInput from "./VoyageursInput";
 
-const VIDE = { titre: "", destination: "", date_debut: "", date_fin: "", budget_total: "" };
+const VIDE = { titre: "", destination: "", date_debut: "", date_fin: "", budget_total: "", voyageurs: 1 };
 
 // formulaire commun à NewTrip et EditTrip
 // valeursInitiales peut être partiel (ex : juste la destination venant de l'URL)
@@ -58,14 +60,12 @@ export default function TripForm({ valeursInitiales, onSubmit, texteBouton = "En
 
       <div>
         <label htmlFor="trip-destination" className="label">Destination</label>
-        <input
+        <DestinationInput
           id="trip-destination"
-          type="text"
-          name="destination"
-          placeholder="Ville, pays"
           value={form.destination}
-          onChange={handleChange}
-          className="input"
+          onChange={(texte) => setForm({ ...form, destination: texte })}
+          onSelect={(lieu) => setForm({ ...form, destination: lieu.label })}
+          placeholder="Ville, pays"
         />
       </div>
 
@@ -95,6 +95,15 @@ export default function TripForm({ valeursInitiales, onSubmit, texteBouton = "En
             className="input"
           />
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="trip-voyageurs" className="label">Voyageurs</label>
+        <VoyageursInput
+          id="trip-voyageurs"
+          value={form.voyageurs}
+          onChange={(nombre) => setForm({ ...form, voyageurs: nombre })}
+        />
       </div>
 
       <div>

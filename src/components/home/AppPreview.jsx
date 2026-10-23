@@ -9,7 +9,7 @@ const jours = [
 export default function AppPreview() {
   return (
     <div
-      className="w-full max-w-md mx-auto rounded-3xl border border-white/10 bg-slate-950/70 p-3 shadow-2xl shadow-violet-950/50"
+      className="w-full max-w-md mx-auto rounded-3xl border border-slate-800 bg-slate-950/70 p-3 shadow-2xl shadow-violet-950/50"
       aria-hidden="true"
     >
       {/* barre de fenêtre */}

@@ -2,20 +2,23 @@ import { useEffect, useState } from "react";
 import { chercherLieux } from "../lib/wikipedia";
 
 // lieux Wikipédia autour du centre, chargés seulement quand l'onglet est ouvert
-export function useLieux(centre, actif) {
+// motCle (optionnel) : recherche précise ("musée", "voiture"...) au lieu des lieux populaires
+export function useLieux(centre, actif, motCle = "") {
   const [etat, setEtat] = useState({ cle: "", lieux: [], error: "" });
 
   const lat = centre?.[0];
   const lon = centre?.[1];
-  const cle = centre ? `${lat},${lon}` : "";
+  const mot = (motCle || "").trim();
+  // le mot-clé fait partie de la clé : un nouveau mot = une nouvelle recherche
+  const cle = centre ? `${lat},${lon},${mot.toLowerCase()}` : "";
   const doitCharger = Boolean(actif && centre);
 
   useEffect(() => {
-    // déjà chargé pour ce centre -> pas de nouvelle requête
+    // déjà chargé pour ce centre (et ce mot-clé) -> pas de nouvelle requête
     if (!doitCharger || etat.cle === cle) return;
 
     let annule = false;
-    chercherLieux(lat, lon)
+    chercherLieux(lat, lon, mot)
       .then((lieux) => {
         if (!annule) setEtat({ cle, lieux, error: "" });
       })
@@ -26,7 +29,7 @@ export function useLieux(centre, actif) {
     return () => {
       annule = true;
     };
-  }, [doitCharger, cle, lat, lon, etat.cle]);
+  }, [doitCharger, cle, lat, lon, mot, etat.cle]);
 
   const aJour = etat.cle === cle;
   return {

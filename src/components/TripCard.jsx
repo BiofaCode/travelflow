@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MapPin, CalendarDays, ListChecks, Plane } from "lucide-react";
+import { MapPin, CalendarDays, ListChecks, Plane, Users } from "lucide-react";
 import BudgetBar from "./BudgetBar";
 import { formatDate, nombreDeJours, aujourdhui } from "../lib/dates";
 import { formatCHF } from "../lib/format";
@@ -25,7 +25,7 @@ function badgeStatut(trip) {
   const jours = Math.round((new Date(trip.date_debut) - new Date(today)) / 86400000);
   return {
     texte: jours === 1 ? "Demain" : `Dans ${jours} jours`,
-    classe: "bg-slate-950/50 text-white",
+    classe: "bg-black/40 text-white",
   };
 }
 
@@ -59,6 +59,7 @@ export default function TripCard({ trip }) {
   const steps = trip.steps || [];
   const depense = steps.reduce((total, s) => total + (Number(s.cout) || 0), 0);
   const nbJours = nombreDeJours(trip.date_debut, trip.date_fin);
+  const nbVoyageurs = trip.voyageurs || 1;
   const degrade = DEGRADES[Number(trip.id) % DEGRADES.length] || DEGRADES[0];
   const badge = badgeStatut(trip);
 
@@ -80,7 +81,7 @@ export default function TripCard({ trip }) {
           {badge.texte}
         </span>
         {/* fondu vers le bas pour bien lier la bannière à la carte */}
-        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-900/50 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/30 to-transparent" />
       </div>
 
       <div className="p-5">
@@ -102,6 +103,10 @@ export default function TripCard({ trip }) {
           <span className="pill">
             <ListChecks size={13} className="text-rose-300" />
             {steps.length} étape{steps.length > 1 ? "s" : ""}
+          </span>
+          <span className="pill">
+            <Users size={13} className="text-violet-300" />
+            {nbVoyageurs}
           </span>
         </div>
 

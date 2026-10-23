@@ -2,19 +2,21 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import {
   MapContainer,
-  TileLayer,
   Marker,
   CircleMarker,
   Polyline,
   Popup,
+  ZoomControl,
   useMap,
   useMapEvents,
 } from "react-leaflet";
-import { Map as MapIcon, Plus } from "lucide-react";
+import { Map as MapIcon, MousePointerClick, Plus } from "lucide-react";
+import FondCarte from "./FondCarte";
 import "../lib/leafletIcons.js";
 import { formatHeure } from "../lib/format";
 
 const ROSE = "#f43f5e";
+const VIOLET = "#8b5cf6";
 
 // une icône par numéro, gardée en cache pour ne pas la recréer à chaque render
 const iconesNumero = {};
@@ -22,10 +24,11 @@ function iconeNumero(n) {
   if (!iconesNumero[n]) {
     iconesNumero[n] = L.divIcon({
       className: "",
-      html: `<div class="flex items-center justify-center w-7 h-7 rounded-full bg-rose-500 text-white text-xs font-bold border-2 border-slate-950 shadow-lg">${n}</div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
-      popupAnchor: [0, -14],
+      // épingle en goutte (voir .carte-pin dans index.css), la pointe en bas = le point exact
+      html: `<div class="carte-pin"><span>${n}</span></div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 41], // la pointe dépasse un peu en bas à cause de la rotation
+      popupAnchor: [0, -32],
     });
   }
   return iconesNumero[n];
@@ -112,14 +115,10 @@ export default function TripMap({
   const cleVue = `${jourActif}|${pointsVue.length}|${centreDestination?.join(",") ?? ""}`;
 
   return (
-    <div className={`relative isolate rounded-2xl overflow-hidden border border-slate-800 ${className}`}>
-      <MapContainer center={centreInitial} zoom={12} scrollWheelZoom style={{ height: "100%", width: "100%" }}>
-        {/* tuiles OSM classiques + filtre sombre (index.css) */}
-        <TileLayer
-          attribution="&copy; OpenStreetMap contributors"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          className="map-tiles-dark"
-        />
+    <div className={`relative isolate rounded-3xl overflow-hidden border border-slate-800 shadow-xl shadow-black/20 ${className}`}>
+      <MapContainer center={centreInitial} zoom={12} scrollWheelZoom zoomControl={false} style={{ height: "100%", width: "100%" }}>
+        <FondCarte />
+        <ZoomControl position="bottomright" />
 
         <AjusterVue points={pointsVue} centre={centreDestination} cle={cleVue} />
         {onMapClick && <ClicCarte onMapClick={onMapClick} />}
@@ -148,17 +147,20 @@ export default function TripMap({
             <CircleMarker
               key={lieu.id}
               center={[lieu.lat, lieu.lon]}
-              radius={survole ? 10 : 6}
+              radius={survole ? 11 : 7}
               bubblingMouseEvents={false}
               pathOptions={{
-                color: "#fda4af",
+                color: "#ffffff",
                 weight: 2,
-                fillColor: ROSE,
-                fillOpacity: survole ? 0.9 : 0.15,
+                fillColor: VIOLET,
+                fillOpacity: survole ? 1 : 0.75,
               }}
             >
               <Popup>
-                <strong>{lieu.titre}</strong>
+                {lieu.image && (
+                  <img src={lieu.image} alt="" className="mb-2 h-24 w-48 rounded-lg object-cover" />
+                )}
+                <strong className="block max-w-48">{lieu.titre}</strong>
                 {onAjouterSuggestion && (
                   <button
                     type="button"
@@ -174,8 +176,12 @@ export default function TripMap({
           );
         })}
 
+        {/* le trajet du jour : un trait large et transparent dessous (halo) + le vrai trait */}
         {pointsDuJour.length > 1 && (
-          <Polyline positions={pointsDuJour} pathOptions={{ color: ROSE, weight: 3, opacity: 0.8, dashArray: "6 8" }} />
+          <>
+            <Polyline positions={pointsDuJour} pathOptions={{ color: ROSE, weight: 10, opacity: 0.2 }} />
+            <Polyline positions={pointsDuJour} pathOptions={{ color: ROSE, weight: 3, opacity: 0.95, dashArray: "1 7", lineCap: "round" }} />
+          </>
         )}
 
         {etapesDuJour.map((step, i) => (
@@ -196,7 +202,8 @@ export default function TripMap({
       </MapContainer>
 
       {onMapClick && (
-        <p className="absolute bottom-2 left-2 z-[500] pointer-events-none rounded-lg bg-slate-950/80 border border-slate-800 px-2.5 py-1 text-xs text-slate-400">
+        <p className="absolute top-3 left-3 z-[500] pointer-events-none inline-flex items-center gap-1.5 rounded-full bg-slate-950/80 border border-slate-800 px-3 py-1.5 text-xs font-medium text-slate-300 shadow-lg backdrop-blur-sm">
+          <MousePointerClick size={14} className="text-rose-400" />
           Clique sur la carte pour placer une étape
         </p>
       )}

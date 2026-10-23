@@ -14,6 +14,7 @@ import {
   Plus,
   Printer,
   Trash2,
+  Users,
   Wallet,
 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
@@ -98,14 +99,19 @@ export default function TripDetail() {
 
   const [centreDestination, setCentreDestination] = useState(null);
   const [suggestionSurvolee, setSuggestionSurvolee] = useState(null);
+  // mot-clé de la recherche dans Explorer ("" = lieux populaires)
+  const [motCle, setMotCle] = useState("");
 
   const formRef = useRef(null);
 
   // hook appelé ici (avant les return) : il ne charge rien tant que l'onglet n'est pas ouvert
   const { lieux, loading: lieuxLoading, error: lieuxError } = useLieux(
     centreDestination,
-    onglet === "explorer"
+    onglet === "explorer",
+    motCle
   );
+  // lieux populaires proposés dans le titre du formulaire d'étape (onglet Planning)
+  const { lieux: lieuxPopulaires } = useLieux(centreDestination, onglet === "planning");
 
   useEffect(() => {
     async function fetchTrip() {
@@ -178,6 +184,7 @@ export default function TripDetail() {
         date_debut: trip.date_debut,
         date_fin: trip.date_fin,
         budget_total: trip.budget_total,
+        voyageurs: trip.voyageurs || 1,
         user_id: user.id,
       })
       .select()
@@ -358,6 +365,7 @@ export default function TripDetail() {
   const totalDuJour = etapesDuJour.reduce((somme, s) => somme + (Number(s.cout) || 0), 0);
   const totalDepense = trip.steps.reduce((somme, step) => somme + (Number(step.cout) || 0), 0);
   const nbJours = nombreDeJours(trip.date_debut, trip.date_fin);
+  const nbVoyageurs = trip.voyageurs || 1;
   const rebours = compteARebours(trip.date_debut, trip.date_fin);
 
   const pointChoisi =
@@ -404,6 +412,9 @@ export default function TripDetail() {
                   <CalendarDays size={16} className="shrink-0" />
                   {formatDate(trip.date_debut)} → {formatDate(trip.date_fin)}
                   <span className="text-slate-500">· {nbJours} jour{nbJours > 1 ? "s" : ""}</span>
+                  <span className="inline-flex items-center gap-1 text-slate-500">
+                    · <Users size={14} className="shrink-0" /> {nbVoyageurs} voyageur{nbVoyageurs > 1 ? "s" : ""}
+                  </span>
                 </p>
                 <p
                   className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
@@ -586,6 +597,8 @@ export default function TripDetail() {
                     enCours={ajoutEnCours}
                     modeEdition={idEnEdition !== null}
                     onAnnuler={annulerEdition}
+                    centre={centreDestination}
+                    lieuxPopulaires={lieuxPopulaires}
                   />
                 </div>
               </div>
@@ -599,6 +612,8 @@ export default function TripDetail() {
                   error={lieuxError}
                   onAjouter={ajouterDepuisExplorer}
                   onSurvol={(lieu) => setSuggestionSurvolee(lieu ? lieu.id : null)}
+                  motCle={motCle}
+                  onRecherche={setMotCle}
                 />
               ) : (
                 <p className="card p-4 text-sm text-slate-400">
@@ -633,7 +648,7 @@ export default function TripDetail() {
         <h1 className="text-2xl font-bold">{trip.titre}</h1>
         <p className="text-sm">
           {trip.destination && `${trip.destination} · `}
-          {formatDate(trip.date_debut)} → {formatDate(trip.date_fin)} · {nbJours} jour{nbJours > 1 ? "s" : ""}
+          {formatDate(trip.date_debut)} → {formatDate(trip.date_fin)} · {nbJours} jour{nbJours > 1 ? "s" : ""} · {nbVoyageurs} voyageur{nbVoyageurs > 1 ? "s" : ""}
         </p>
         <p className="text-sm">
           Budget : {formatCHF(trip.budget_total)} · Prévu : {formatCHF(totalDepense)}

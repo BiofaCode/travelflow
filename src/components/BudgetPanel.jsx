@@ -22,6 +22,7 @@ export default function BudgetPanel({ trip, steps, jours }) {
   const budget = Number(trip.budget_total) || 0;
   const depense = steps.reduce((somme, s) => somme + (Number(s.cout) || 0), 0);
   const restant = budget - depense;
+  const nbVoyageurs = Number(trip.voyageurs) || 1;
 
   // total par jour, pour les petites barres
   const parJour = jours.map((jour) => ({
@@ -53,6 +54,13 @@ export default function BudgetPanel({ trip, steps, jours }) {
 
       <div className="card p-5">
         <BudgetBar depense={depense} budget={budget} />
+        {/* utile à plusieurs : combien chacun doit prévoir */}
+        {nbVoyageurs > 1 && (
+          <p className="mt-3 text-sm text-slate-400">
+            Pour {nbVoyageurs} voyageurs : {formatCHF(budget / nbVoyageurs)} de budget et{" "}
+            {formatCHF(depense / nbVoyageurs)} dépensés par personne.
+          </p>
+        )}
       </div>
 
       <div className="card p-5">

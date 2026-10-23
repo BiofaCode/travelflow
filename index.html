@@ -13,6 +13,25 @@
       rel="stylesheet"
     />
     <title>TravelFlow</title>
+    <!-- thème posé AVANT le chargement de React, sinon on voit un flash sombre
+         au chargement quand on est en mode clair -->
+    <script>
+      (function () {
+        var theme = null;
+        try {
+          theme = localStorage.getItem("theme");
+        } catch (e) {
+          // localStorage bloqué : on suit juste le système
+        }
+        if (theme !== "light" && theme !== "dark") {
+          theme = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        }
+        if (theme === "light") {
+          document.documentElement.classList.add("light");
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f4f6fb");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

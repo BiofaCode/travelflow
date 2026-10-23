@@ -12,7 +12,10 @@ les placer sur une carte et de suivre le budget.
 - Tailwind CSS
 - react-router-dom (navigation)
 - react-leaflet + OpenStreetMap (carte)
+- lucide-react (icônes)
 - Back-end : Supabase (auth + base PostgreSQL)
+- APIs gratuites sans clé : Nominatim (géocodage), Photon (autocomplétion des
+  destinations), Wikipédia (suggestions de lieux)
 
 ## Lancer le projet
 
@@ -34,11 +37,14 @@ npm run lint       # vérif du code
 
 ```
 src/
-  components/   composants réutilisables (Navbar, TripCard, TripMap, BudgetBar...)
-  pages/         les écrans (Dashboard, TripDetail, Login, Signup, NewTrip, EditTrip)
-  context/       AuthContext (qui est connecté)
-  hooks/         useAuth
-  lib/           client Supabase, fix icônes Leaflet
+  components/   composants réutilisables (Navbar, TripCard, TripMap, StepForm,
+                ExplorePanel, DestinationInput, TripSearchBar...)
+  components/home/  morceaux de la page d'accueil
+  pages/        les écrans (Home, Dashboard, TripDetail, Login, Signup, NewTrip, EditTrip)
+  context/      AuthContext (qui est connecté)
+  hooks/        useAuth, useLieux, useTheme
+  lib/          client Supabase, appels aux APIs (nominatim, photon, wikipedia),
+                dates, format
 docs/            notes prises pendant le dev
 ```
 
@@ -65,5 +71,16 @@ VITE_SUPABASE_PUBLISHABLE_KEY=...
 - [x] Carte interactive (coordonnées saisies à la main, clic pour placer un point pas encore fait)
 - [x] Budget (barre de progression, calcul réactif à partir des étapes)
 
-**MVP du cahier des charges terminé.** Reste : responsive/finitions, tests,
-README/documentation finale, préparation de la soutenance.
+**MVP du cahier des charges terminé.** En plus :
+
+- [x] Page d'accueil publique + design refait (inspiré de TripkyGo)
+- [x] Responsive (mobile → desktop)
+- [x] Page voyage : planning + carte côte à côte, onglets Planning / Explorer / Budget
+- [x] Clic sur la carte pour placer une étape, itinéraire du jour tracé
+- [x] Suggestions de lieux (Wikipédia) avec catégories et recherche par mot-clé
+- [x] Autocomplétion des destinations
+- [x] Création rapide : destination, dates, nombre de voyageurs
+- [x] Modifier / dupliquer / imprimer, recherche et tri des voyages
+- [x] Mode clair / sombre
+
+Reste : logo, tests, préparation de la soutenance.

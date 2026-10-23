@@ -1,36 +1,80 @@
 @import "tailwindcss";
 
+/* ===== thème clair / sombre =====
+   Les couleurs slate-* de Tailwind sont en fait des variables CSS (--color-slate-950...).
+   En mode clair (classe "light" sur <html>) on inverse juste l'échelle : slate-950 (fond)
+   devient très clair et slate-100 (texte) presque noir => pas besoin de toucher aux composants */
+:root {
+  /* dit au navigateur d'adapter les widgets natifs (date, number...) au thème,
+     sinon leurs icônes/texte deviennent illisibles */
+  color-scheme: dark;
+  --fond-page: #0b1020;
+  --lueur-rose: rgb(244 63 94 / 0.12);
+  --lueur-violet: rgb(139 92 246 / 0.12);
+}
+
+:root.light {
+  color-scheme: light;
+  --fond-page: #f4f6fb;
+  --lueur-rose: rgb(244 63 94 / 0.08);
+  --lueur-violet: rgb(139 92 246 / 0.08);
+
+  --color-slate-950: #f4f6fb; /* fond de page / inputs */
+  --color-slate-900: #ffffff; /* cartes */
+  --color-slate-800: #e2e8f0; /* bordures, fonds survolés */
+  --color-slate-700: #cbd5e1;
+  --color-slate-600: #94a3b8;
+  --color-slate-500: #64748b; /* texte discret (contraste AA sur blanc) */
+  --color-slate-400: #475569; /* texte secondaire */
+  --color-slate-300: #334155;
+  --color-slate-200: #1e293b;
+  --color-slate-100: #0f172a; /* texte principal */
+  --color-slate-50: #020617;
+
+  /* les teintes 300/400 sont faites pour du texte sur fond sombre :
+     sur du blanc elles sont trop pâles, donc on les fonce */
+  --color-rose-300: #e11d48;
+  --color-rose-400: #e11d48;
+  --color-red-300: #dc2626;
+  --color-red-400: #dc2626;
+  --color-emerald-400: #059669;
+  --color-violet-300: #7c3aed;
+
+  /* bloc violet de l'accueil (from-violet-950) : version pastel en clair */
+  --color-violet-950: #ede9fe;
+  --color-violet-900: #ddd6fe;
+}
+
 body {
   font-family: "Plus Jakarta Sans", system-ui, sans-serif;
-  /* dit au navigateur d'adapter les widgets natifs (date, number...) au thème sombre,
-     sinon leurs icônes/texte restent calés pour un fond clair et deviennent illisibles */
-  color-scheme: dark;
-  /* fond bleu nuit + deux lueurs discrètes rose/violet en haut de page */
-  background-color: #0b1020;
+  /* fond uni + deux lueurs discrètes rose/violet en haut de page */
+  background-color: var(--fond-page);
   background-image:
-    radial-gradient(60rem 30rem at 15% -10%, rgb(244 63 94 / 0.12), transparent 60%),
-    radial-gradient(50rem 28rem at 90% -5%, rgb(139 92 246 / 0.12), transparent 60%);
+    radial-gradient(60rem 30rem at 15% -10%, var(--lueur-rose), transparent 60%),
+    radial-gradient(50rem 28rem at 90% -5%, var(--lueur-violet), transparent 60%);
   background-attachment: fixed;
   background-repeat: no-repeat;
+  /* petite transition au changement de thème (coupée par prefers-reduced-motion plus bas) */
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* texte sélectionné en rose */
 ::selection {
   background: rgb(244 63 94 / 0.35);
-  color: #fff;
+  color: var(--color-slate-50); /* blanc en sombre, quasi noir en clair */
 }
 
-/* scrollbar fine et sombre */
+/* scrollbar fine (slate-700 => suit le thème) */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #334155 transparent;
+  scrollbar-color: var(--color-slate-700) transparent;
 }
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: var(--color-slate-700);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-track {
@@ -99,51 +143,49 @@ body {
   }
 }
 
-/* effet "carte sombre" sur les tuiles OpenStreetMap classiques, sans service tiers :
-   invert retourne toutes les couleurs, hue-rotate corrige les teintes (sinon le bleu
-   de l'eau devient orange), brightness/contrast ajustent le rendu final */
-.map-tiles-dark {
-  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+/* en clair, l'ombre noire des cartes fait "sale" : ombre plus légère */
+:root.light .card {
+  box-shadow: 0 10px 30px -12px rgb(15 23 42 / 0.12);
 }
 
-/* popups Leaflet assortis au thème sombre (par défaut : fond blanc) */
+/* popups Leaflet assortis au thème (variables slate => marchent en clair et en sombre) */
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
-  background: #0f172a; /* slate-900 */
-  color: #f1f5f9; /* slate-100 */
+  background: var(--color-slate-900);
+  color: var(--color-slate-100);
 }
 .leaflet-popup-content-wrapper {
   border-radius: 1rem;
-  border: 1px solid #1e293b; /* slate-800 */
+  border: 1px solid var(--color-slate-800);
 }
 .leaflet-container a.leaflet-popup-close-button {
-  color: #94a3b8; /* slate-400 */
+  color: var(--color-slate-400);
 }
 
-/* boutons zoom +/- sombres */
+/* boutons zoom +/- assortis au thème */
 .leaflet-bar {
-  border: 1px solid #334155 !important; /* slate-700 */
+  border: 1px solid var(--color-slate-700) !important;
   border-radius: 0.75rem !important;
   overflow: hidden;
 }
 .leaflet-bar a,
 .leaflet-bar a:hover {
-  background: #0f172a; /* slate-900 */
-  color: #e2e8f0; /* slate-200 */
-  border-bottom-color: #334155;
+  background: var(--color-slate-900);
+  color: var(--color-slate-200);
+  border-bottom-color: var(--color-slate-700);
 }
 .leaflet-bar a:hover {
-  background: #1e293b; /* slate-800 */
+  background: var(--color-slate-800);
 }
 
 /* attribution plus discrète */
 .leaflet-container .leaflet-control-attribution {
-  background: rgb(15 23 42 / 0.7);
-  color: #64748b; /* slate-500 */
+  background: color-mix(in srgb, var(--color-slate-900) 70%, transparent);
+  color: var(--color-slate-500);
   font-size: 10px;
 }
 .leaflet-control-attribution a {
-  color: #94a3b8;
+  color: var(--color-slate-400);
 }
 
 /* moins d'animations pour ceux qui l'ont demandé dans leur système */
@@ -163,4 +205,25 @@ body {
   body {
     background: white;
   }
+}
+
+/* marqueur des étapes : un carré arrondi sauf un coin, tourné de 45° = une goutte.
+   Le numéro est tourné dans l'autre sens pour rester droit */
+.carte-pin {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #f43f5e, #8b5cf6);
+  border: 3px solid #fff;
+  box-shadow: 0 6px 14px rgb(0 0 0 / 0.35);
+}
+.carte-pin span {
+  transform: rotate(45deg);
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
 }
