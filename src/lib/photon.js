@@ -2,11 +2,18 @@
 // basé sur OpenStreetMap comme Nominatim, mais fait pour l'autocomplétion :
 // gratuit, sans clé, CORS ok, et lang=fr donne les noms en français ("Italie", "Japon")
 
+import { avecCache } from "./cache";
+
 // les types OSM qu'on garde : des villes, des pays, des régions (pas les rues, gares...)
 const VILLES = ["city", "town", "village", "municipality"];
 const REGIONS = ["state", "province", "region", "island", "archipelago"];
 
-export async function suggererDestinations(texte, signal) {
+// en cache : effacer puis retaper "Rom" ne relance pas la requête
+export function suggererDestinations(texte, signal) {
+  return avecCache(`photon:${texte.toLowerCase()}`, () => chercherDestinations(texte, signal));
+}
+
+async function chercherDestinations(texte, signal) {
   // osm_tag=place : Photon ne renvoie déjà que des "lieux" (pas les magasins, bureaux...)
   const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(texte)}&limit=12&lang=fr&osm_tag=place`;
   const response = await fetch(url, { signal });
@@ -66,7 +73,12 @@ const TYPES_LIEU = {
 // ce qui n'est pas un "lieu à visiter" : routes, zones, frontières...
 const CLES_IGNOREES = ["highway", "landuse", "boundary", "railway", "power", "office"];
 
-export async function suggererLieuxProches(texte, centre, signal) {
+export function suggererLieuxProches(texte, centre, signal) {
+  const cle = `photon-lieux:${centre.join(",")}:${texte.toLowerCase()}`;
+  return avecCache(cle, () => chercherLieuxProches(texte, centre, signal));
+}
+
+async function chercherLieuxProches(texte, centre, signal) {
   const [lat, lon] = centre;
   const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(texte)}&lat=${lat}&lon=${lon}&limit=15&lang=fr`;
   const response = await fetch(url, { signal });

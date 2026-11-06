@@ -112,20 +112,6 @@ body {
       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500;
   }
 
-  /* bouton spécial "mise en avant" : dégradé rose -> violet */
-  .btn-gradient {
-    @apply inline-flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-violet-500 text-white font-semibold
-      rounded-full px-5 py-2.5 text-sm transition shadow-lg shadow-violet-500/25
-      hover:brightness-110 hover:shadow-rose-500/40
-      disabled:opacity-50 disabled:cursor-not-allowed
-      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950;
-  }
-
-  .btn-ghost-danger {
-    @apply inline-flex items-center gap-1.5 text-sm font-semibold text-red-400 rounded-full px-3 py-1
-      transition hover:bg-red-500/10;
-  }
-
   /* texte en dégradé (pour un mot dans un titre par ex.) */
   .text-gradient {
     @apply bg-gradient-to-r from-rose-500 to-violet-500 bg-clip-text text-transparent;
@@ -148,13 +134,15 @@ body {
   box-shadow: 0 10px 30px -12px rgb(15 23 42 / 0.12);
 }
 
-/* popups Leaflet assortis au thème (variables slate => marchent en clair et en sombre) */
-.leaflet-popup-content-wrapper,
-.leaflet-popup-tip {
+/* popups Leaflet assortis au thème (variables slate => marchent en clair et en sombre)
+   ".leaflet-container" devant : le CSS de Leaflet est chargé après le nôtre
+   (avec la page en lazy), à force égale c'est lui qui gagnait (popup blanc) */
+.leaflet-container .leaflet-popup-content-wrapper,
+.leaflet-container .leaflet-popup-tip {
   background: var(--color-slate-900);
   color: var(--color-slate-100);
 }
-.leaflet-popup-content-wrapper {
+.leaflet-container .leaflet-popup-content-wrapper {
   border-radius: 1rem;
   border: 1px solid var(--color-slate-800);
 }
@@ -186,6 +174,26 @@ body {
 }
 .leaflet-control-attribution a {
   color: var(--color-slate-400);
+}
+
+/* popups en "fiche" (photo collée aux bords, comme Wanderlog) :
+   on enlève les marges de Leaflet, la fiche gère son propre padding */
+.popup-fiche .leaflet-popup-content-wrapper {
+  padding: 0;
+  overflow: hidden;
+}
+.popup-fiche .leaflet-popup-content {
+  margin: 0;
+  line-height: 1.4;
+}
+.popup-fiche a.leaflet-popup-close-button {
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: rgb(15 23 42 / 0.7);
+  color: #fff;
 }
 
 /* moins d'animations pour ceux qui l'ont demandé dans leur système */
@@ -226,4 +234,18 @@ body {
   color: #fff;
   font-weight: 800;
   font-size: 13px;
+}
+/* même épingle en plus petit, pour la liste des étapes */
+.carte-pin-sm {
+  width: 28px;
+  height: 28px;
+  border-width: 2px;
+  box-shadow: 0 4px 10px rgb(0 0 0 / 0.25);
+}
+.carte-pin-sm span {
+  font-size: 12px;
+}
+/* étape sans position : grise, puisqu'elle n'est pas sur la carte */
+.carte-pin-gris {
+  background: #64748b;
 }

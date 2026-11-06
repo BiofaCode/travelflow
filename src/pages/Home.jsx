@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarDays, Map as MapIcon, Compass, Wallet, Smartphone, Pencil, ArrowRight } from "lucide-react";
-import HeroIllustration from "../components/home/HeroIllustration";
+import HeroPhotos from "../components/home/HeroPhotos";
 import AppPreview from "../components/home/AppPreview";
 import SearchBar from "../components/home/SearchBar";
 
@@ -104,13 +104,11 @@ export default function Home() {
             </div>
           </div>
 
-          {/* illustration : réduite sur mobile */}
-          <div className="max-w-[260px] sm:max-w-sm lg:max-w-none mx-auto w-full">
-            <HeroIllustration />
-          </div>
+          {/* photos de destinations (Wikipédia) */}
+          <HeroPhotos />
         </div>
 
-        <div className="mt-10 lg:mt-6">
+        <div className="mt-12">
           <SearchBar />
         </div>
       </section>

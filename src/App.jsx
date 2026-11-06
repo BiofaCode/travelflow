@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route, Link, useParams } from "react-router-dom";
+import { Routes, Route, Link, useMatch, useParams } from "react-router-dom";
 import { MapPinOff } from "lucide-react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -8,13 +8,15 @@ import Spinner from "./components/Spinner";
 import { useAuth } from "./hooks/useAuth";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import NewTrip from "./pages/NewTrip";
-import EditTrip from "./pages/EditTrip";
 
-// TripDetail embarque Leaflet (lourd) : on ne le charge que quand on ouvre un voyage
+// les autres pages sont chargées seulement quand on y va : la 1re page
+// (accueil ou mes voyages) s'affiche plus vite
+// TripDetail surtout, il embarque Leaflet (lourd)
 const TripDetail = lazy(() => import("./pages/TripDetail"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const NewTrip = lazy(() => import("./pages/NewTrip"));
+const EditTrip = lazy(() => import("./pages/EditTrip"));
 
 // "/" : connecté -> mes voyages, sinon -> page d'accueil publique
 function Accueil() {
@@ -47,11 +49,20 @@ function PageIntrouvable() {
 }
 
 export default function App() {
+  // la page d'un voyage prend toute la largeur (carte collée au bord droit,
+  // comme Wanderlog) : pas de max-w ni de padding pour elle
+  // (useMatch("/trips/:id") attrape aussi "/trips/new", d'où le 2e test)
+  const matchVoyage = useMatch("/trips/:id");
+  const matchNouveau = useMatch("/trips/new");
+  const pageVoyage = matchVoyage && !matchNouveau;
+
+  // overflow-x-clip et pas overflow-x-hidden : "hidden" casse les position: sticky
+  // (navbar, carte, onglets), "clip" coupe juste ce qui dépasse
   return (
-    <div className="min-h-screen flex flex-col text-slate-100 overflow-x-hidden">
+    <div className="min-h-screen flex flex-col text-slate-100 overflow-x-clip">
       <Navbar />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      <main className={pageVoyage ? "flex-1 w-full" : "flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6"}>
         <Suspense fallback={<Spinner />}>
           <Routes>
             <Route path="/" element={<Accueil />} />

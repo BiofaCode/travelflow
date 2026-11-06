@@ -1,12 +1,39 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../hooks/useAuth";
+import { usePhotoDestination } from "../hooks/usePhotoDestination";
 import TripSearchBar from "../components/TripSearchBar";
+import ImageFondu from "../components/ImageFondu";
 
 // quelques idées pour démarrer vite
 const POPULAIRES = ["Rome", "Tokyo", "Lisbonne", "New York", "Barcelone", "Munich"];
+
+// une destination populaire en tuile avec sa photo (comme les idées de Wanderlog)
+// cliquer dessus remplit la destination dans la barre
+function TuileDestination({ ville, choisie, onClick }) {
+  const { url } = usePhotoDestination(ville);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={choisie}
+      className={`group relative h-28 overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500 to-violet-600 text-left transition sm:h-32 ${
+        choisie ? "ring-2 ring-rose-500 ring-offset-2 ring-offset-[var(--fond-page)]" : "hover:-translate-y-0.5"
+      }`}
+    >
+      {url && <ImageFondu key={url} src={url} className="transition-transform duration-500 group-hover:scale-105" />}
+      <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+      <span className="absolute bottom-2.5 left-3 font-bold text-white">{ville}</span>
+      {choisie && (
+        <span className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-full bg-rose-500 text-white">
+          <Check size={14} />
+        </span>
+      )}
+    </button>
+  );
+}
 
 export default function NewTrip() {
   const { user } = useAuth();
@@ -106,21 +133,14 @@ export default function NewTrip() {
 
       <div className="mt-8">
         <h2 className="text-sm font-bold text-slate-300">Destinations populaires</h2>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {POPULAIRES.map((ville) => (
-            <button
+            <TuileDestination
               key={ville}
-              type="button"
+              ville={ville}
+              choisie={valeurs.destination === ville}
               onClick={() => choisirDestination(ville)}
-              aria-pressed={valeurs.destination === ville}
-              className={`px-4 py-2 rounded-full text-sm font-semibold border transition ${
-                valeurs.destination === ville
-                  ? "bg-rose-500 text-white border-rose-500"
-                  : "border-slate-700 text-slate-300 hover:border-rose-500 hover:text-rose-400"
-              }`}
-            >
-              {ville}
-            </button>
+            />
           ))}
         </div>
       </div>

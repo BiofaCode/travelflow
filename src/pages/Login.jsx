@@ -36,7 +36,7 @@ export default function Login() {
     <div className="min-h-[70vh] flex items-center justify-center">
       {/* split sur grand écran : visuel à gauche, formulaire à droite */}
       <div className="card w-full max-w-md lg:max-w-5xl overflow-hidden grid lg:grid-cols-2">
-        <AuthVisuel titre="Tes voyages t'attendent." texte="Retrouve tes itinéraires, tes étapes et ton budget au même endroit." />
+        <AuthVisuel titre="Tes voyages t'attendent." texte="Retrouve tes itinéraires, tes étapes et ton budget au même endroit." destination="Barcelone" />
 
         <div className="p-6 sm:p-10 lg:py-14">
           <div className="text-center lg:text-left mb-8">

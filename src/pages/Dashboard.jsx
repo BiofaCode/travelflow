@@ -6,6 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import { aujourdhui, nombreDeJours } from "../lib/dates";
 import { formatCHF } from "../lib/format";
 import TripCard from "../components/TripCard";
+import ProchainVoyage from "../components/ProchainVoyage";
 import Spinner from "../components/Spinner";
 
 // même idée que TripDetail : Leaflet n'est chargé que si la carte s'affiche
@@ -83,6 +84,8 @@ export default function Dashboard() {
   const aDesPoints = trips.some((t) => (t.steps || []).some((s) => s.latitude && s.longitude));
 
   const prenom = user?.email?.split("@")[0];
+  // le voyage en cours ou le prochain (les voyages sont déjà triés par date de début)
+  const prochain = trips.find((t) => t.date_fin >= today);
 
   return (
     <div className="space-y-8">
@@ -119,6 +122,8 @@ export default function Dashboard() {
 
       {trips.length > 0 && (
         <>
+          {prochain && <ProchainVoyage trip={prochain} />}
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Stat icone={Plane} label="Voyages" valeur={trips.length} />
             <Stat icone={CalendarDays} label="Jours prévus" valeur={totalJours} />

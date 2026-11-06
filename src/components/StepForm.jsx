@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { MapPin, Plus, Save, X } from "lucide-react";
 import { formatJourCourt } from "../lib/dates";
+import { couleurJour } from "../lib/couleurs";
 import { suggererLieuxProches } from "../lib/photon";
 import DestinationInput from "./DestinationInput";
 
@@ -55,15 +56,25 @@ export default function StepForm({
   }
 
   const aDesCoordonnees = step.latitude !== "" && step.longitude !== "";
+  const indexJour = jours.indexOf(step.jour);
 
   return (
     <form
       onSubmit={onSubmit}
       className={`card p-4 sm:p-5 space-y-4 ${modeEdition ? "border-rose-500/50" : ""}`}
     >
-      <h3 className="font-semibold text-slate-100">
-        {modeEdition ? "Modifier l'étape" : "Ajouter une étape"}
-      </h3>
+      {/* en-tête : le titre + le jour choisi, avec la couleur de ce jour sur la carte */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-semibold text-slate-100">
+          {modeEdition ? "Modifier l'étape" : "Ajouter une étape"}
+        </h3>
+        {indexJour >= 0 && (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: couleurJour(indexJour) }} />
+            Jour {indexJour + 1} · {formatJourCourt(step.jour)}
+          </span>
+        )}
+      </div>
 
       {erreur && (
         <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
@@ -135,18 +146,24 @@ export default function StepForm({
           />
         </div>
         <div>
-          <label htmlFor="step-cout" className="label">Coût (CHF)</label>
-          <input
-            id="step-cout"
-            type="number"
-            name="cout"
-            min="0"
-            step="0.05"
-            placeholder="0"
-            value={step.cout}
-            onChange={handleChange}
-            className="input"
-          />
+          <label htmlFor="step-cout" className="label">Coût</label>
+          {/* "CHF" collé dans le champ, comme le budget du voyage */}
+          <div className="relative">
+            <input
+              id="step-cout"
+              type="number"
+              name="cout"
+              min="0"
+              step="0.05"
+              placeholder="0"
+              value={step.cout}
+              onChange={handleChange}
+              className="input pr-14"
+            />
+            <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">
+              CHF
+            </span>
+          </div>
         </div>
       </div>
 

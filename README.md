@@ -11,7 +11,7 @@ les placer sur une carte et de suivre le budget.
 - React + Vite
 - Tailwind CSS
 - react-router-dom (navigation)
-- react-leaflet + OpenStreetMap (carte)
+- react-leaflet + MapLibre (carte, fond vectoriel OpenFreeMap / OpenStreetMap)
 - lucide-react (icônes)
 - Back-end : Supabase (auth + base PostgreSQL)
 - APIs gratuites sans clé : Nominatim (géocodage), Photon (autocomplétion des
@@ -42,10 +42,10 @@ src/
   components/home/  morceaux de la page d'accueil
   pages/        les écrans (Home, Dashboard, TripDetail, Login, Signup, NewTrip, EditTrip)
   context/      AuthContext (qui est connecté)
-  hooks/        useAuth, useLieux, useTheme
-  lib/          client Supabase, appels aux APIs (nominatim, photon, wikipedia),
+  hooks/        useAuth, useLieux, useTheme, usePhotoDestination
+  lib/          client Supabase, appels aux APIs (nominatim, photon, wikipedia), cache, distance, couleurs des jours,
                 dates, format
-docs/            notes prises pendant le dev
+docs/            journal de bord (JournalDeBord.md) et captures d'écran
 ```
 
 ## Configuration
@@ -68,7 +68,7 @@ VITE_SUPABASE_PUBLISHABLE_KEY=...
 - [x] Espace personnel (Dashboard + TripDetail lisent les vraies données Supabase)
 - [x] CRUD voyages complet (créer, modifier, supprimer)
 - [x] Ajouter/supprimer une étape depuis l'interface
-- [x] Carte interactive (coordonnées saisies à la main, clic pour placer un point pas encore fait)
+- [x] Carte interactive (marqueurs des étapes, fonds clair/sombre)
 - [x] Budget (barre de progression, calcul réactif à partir des étapes)
 
 **MVP du cahier des charges terminé.** En plus :
@@ -82,5 +82,16 @@ VITE_SUPABASE_PUBLISHABLE_KEY=...
 - [x] Création rapide : destination, dates, nombre de voyageurs
 - [x] Modifier / dupliquer / imprimer, recherche et tri des voyages
 - [x] Mode clair / sombre
+- [x] Suggestions de lieux directement dans le titre d'une étape
+- [x] Optimisation : build découpé en plusieurs fichiers, pages chargées à la demande, cache des APIs
 
-Reste : logo, tests, préparation de la soutenance.
+Reste à faire :
+
+- [x] Logo (SVG) + favicon
+- [x] Design étape 1 : page d'un voyage façon Wanderlog (photo, carte pleine hauteur, étapes avec trajet)
+- [x] Design étape 2 : la carte (fond vectoriel OpenFreeMap, une couleur par jour, popups en fiche, bouton recentrer)
+- [x] Voyage de démo (`supabase/demo-rome.sql`)
+- [x] Design étape 3 : dashboard et accueil avec les vraies photos des destinations
+- [x] Design étape 4 : formulaires (nouveau voyage, modifier, connexion, étape)
+- [ ] Tests / corrections de bugs
+- [ ] Préparation de la démo / soutenance

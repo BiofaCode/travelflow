@@ -1,3 +1,5 @@
+import { avecCache } from "./cache";
+
 // lieux intéressants autour d'un point, via la recherche de Wikipédia
 // gratuite, sans clé, et origin=* autorise l'appel direct depuis le navigateur (CORS)
 // (Overpass, prévu au départ, était trop souvent saturé / en timeout)
@@ -42,6 +44,16 @@ function trouverCategorie(titre, description) {
   return parDescription !== "autre" ? parDescription : categorieDe(titre);
 }
 
+// l'image d'une page Wikipédia n'est pas toujours une photo : drapeau, carte,
+// logo (ex. "Musées du Vatican" = le logo du musée)... On garde seulement les
+// .jpg dont le nom ne ressemble pas à ça (les logos et cartes sont en .svg/.png)
+// collage/montage : Rome a un montage de 6 petites photos, moche en grand
+const PAS_UNE_PHOTO = /flag|drapeau|bandeira|bandera|blason|coat.of.arms|wappen|map|carte|locator|location|orthographic|logo|seal|collage|montage/i;
+
+function estUnePhoto(nom = "") {
+  return /\.jpe?g$/i.test(nom) && !PAS_UNE_PHOTO.test(nom);
+}
+
 async function chercherDansWikipedia(langue, lat, lon, motCle) {
   // avec un mot-clé on élargit un peu le rayon (15 km)
   const recherche = motCle ? `${motCle} nearcoord:15km,${lat},${lon}` : `nearcoord:10km,${lat},${lon}`;
@@ -53,7 +65,7 @@ async function chercherDansWikipedia(langue, lat, lon, motCle) {
     gsrlimit: "50",
     prop: "coordinates|pageimages|description",
     colimit: "max", // sinon l'API ne renvoie les coordonnées que pour 10 pages
-    piprop: "thumbnail",
+    piprop: "thumbnail|name",
     pithumbsize: "400",
     pilimit: "max",
     format: "json",
@@ -80,7 +92,7 @@ async function chercherDansWikipedia(langue, lat, lon, motCle) {
       categorie: trouverCategorie(p.title, p.description ?? ""),
       lat: p.coordinates[0].lat,
       lon: p.coordinates[0].lon,
-      image: p.thumbnail?.source ?? null,
+      image: estUnePhoto(p.pageimage) ? p.thumbnail?.source ?? null : null,
       url: `https://${langue}.wikipedia.org/?curid=${p.pageid}`,
     }));
 }
@@ -91,8 +103,58 @@ function memeEndroit(a, b) {
   return Math.abs(a.lat - b.lat) < 0.0015 && Math.abs(a.lon - b.lon) < 0.0015;
 }
 
-export async function chercherLieux(lat, lon, motCle = "") {
+// ---- photo de couverture d'un voyage ----
+// l'image principale de la page Wikipédia de la ville (voir estUnePhoto plus haut)
+
+async function imagePrincipale(langue, titre) {
+  const params = new URLSearchParams({
+    action: "query",
+    titles: titre,
+    prop: "pageimages|langlinks",
+    piprop: "thumbnail|name",
+    pithumbsize: "1600",
+    lllang: "en", // le titre anglais, si on doit réessayer sur le Wikipédia anglais
+    redirects: "1",
+    format: "json",
+    origin: "*",
+  });
+  const response = await fetch(`https://${langue}.wikipedia.org/w/api.php?${params}`);
+  if (!response.ok) throw new Error("Wikipédia indisponible");
+  const data = await response.json();
+  const page = Object.values(data.query?.pages ?? {})[0] ?? {};
+
+  return {
+    image: estUnePhoto(page.pageimage) ? page.thumbnail?.source ?? null : null,
+    titreAnglais: page.langlinks?.[0]?.["*"] ?? null,
+  };
+}
+
+// "Lisbonne, Portugal" -> photo de Lisbonne (ou null). Gardé dans le localStorage
+// "photo2:" : clé changée quand le filtre a changé (sinon les navigateurs
+// gardaient l'ancienne photo de Rome en cache)
+export function photoDestination(destination) {
+  const ville = destination.split(",")[0].trim();
+  return avecCache(
+    `photo2:${ville.toLowerCase()}`,
+    async () => {
+      const fr = await imagePrincipale("fr", ville);
+      if (fr.image || !fr.titreAnglais) return fr.image;
+      // ex : Lisbonne a un drapeau en fr, mais une vraie photo en anglais
+      const en = await imagePrincipale("en", fr.titreAnglais);
+      return en.image;
+    },
+    true
+  );
+}
+
+// même centre + même mot-clé = mêmes lieux : en changeant d'onglet (Planning <-> Explorer)
+// ou en revenant sur le voyage, on ne redemande pas tout à Wikipédia
+export function chercherLieux(lat, lon, motCle = "") {
   const mot = motCle.trim();
+  return avecCache(`wiki:${lat},${lon},${mot.toLowerCase()}`, () => chercherLieuxFrEn(lat, lon, mot));
+}
+
+async function chercherLieuxFrEn(lat, lon, mot) {
 
   // allSettled : si une des deux langues plante, on garde quand même l'autre
   const [fr, en] = await Promise.allSettled([

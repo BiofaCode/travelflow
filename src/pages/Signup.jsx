@@ -41,7 +41,7 @@ export default function Signup() {
     <div className="min-h-[70vh] flex items-center justify-center">
       {/* split sur grand écran : visuel à gauche, formulaire à droite */}
       <div className="card w-full max-w-md lg:max-w-5xl overflow-hidden grid lg:grid-cols-2">
-        <AuthVisuel titre="Planifie ton prochain grand départ." texte="Crée tes voyages, organise chaque jour et garde un œil sur ton budget." />
+        <AuthVisuel titre="Planifie ton prochain grand départ." texte="Crée tes voyages, organise chaque jour et garde un œil sur ton budget." destination="Lisbonne" />
 
         <div className="p-6 sm:p-10 lg:py-14">
           <div className="text-center lg:text-left mb-8">

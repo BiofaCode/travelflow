@@ -24,11 +24,14 @@ import TripMap from "../components/TripMap";
 import BudgetBar from "../components/BudgetBar";
 import BudgetPanel from "../components/BudgetPanel";
 import ExplorePanel from "../components/ExplorePanel";
+import CouvertureVoyage from "../components/CouvertureVoyage";
 import Spinner from "../components/Spinner";
 import { useLieux } from "../hooks/useLieux";
 import { useAuth } from "../hooks/useAuth";
 import { geocodeDestination } from "../lib/nominatim";
-import { formatDate, formatJourCourt, listerJours, nombreDeJours, aujourdhui } from "../lib/dates";
+import { formatDate, formatJourCourt, listerJours, nombreDeJours, aujourdhui, trierParHeure, compteARebours } from "../lib/dates";
+import { distanceKm, trajetEstime } from "../lib/distance";
+import { couleurJour } from "../lib/couleurs";
 import { formatCHF, formatHeure } from "../lib/format";
 
 // jour vide = on prendra le jour affiché dans le planning
@@ -39,27 +42,6 @@ const ONGLETS = [
   { id: "explorer", label: "Explorer", icone: Compass },
   { id: "budget", label: "Budget", icone: Wallet },
 ];
-
-// tri par heure, les étapes sans heure à la fin
-function trierParHeure(a, b) {
-  if (!a.heure && !b.heure) return 0;
-  if (!a.heure) return 1;
-  if (!b.heure) return -1;
-  return a.heure.localeCompare(b.heure);
-}
-
-// "Départ dans 12 jours" / "En cours – jour 3 sur 7" / "Terminé"
-function compteARebours(debut, fin) {
-  const today = aujourdhui();
-  if (today > fin) return "Terminé";
-
-  // écart en jours (dates à minuit UTC, donc des multiples de 24h)
-  const ecart = Math.round((new Date(debut) - new Date(today)) / 86400000);
-  if (ecart === 1) return "Départ demain";
-  if (ecart > 0) return `Départ dans ${ecart} jours`;
-
-  return `En cours – jour ${-ecart + 1} sur ${nombreDeJours(debut, fin)}`;
-}
 
 // une étape Supabase -> valeurs du formulaire (que des strings, comme les inputs)
 function etapeVersFormulaire(step) {
@@ -373,122 +355,188 @@ export default function TripDetail() {
       ? [Number(newStep.latitude), Number(newStep.longitude)]
       : null;
 
+  // photos connues des lieux Wikipédia, retrouvées par le titre de l'étape
+  // (une étape ajoutée depuis Explorer ou les lieux populaires a le même titre)
+  const photos = new Map();
+  for (const lieu of [...lieuxPopulaires, ...lieux]) {
+    if (lieu.image) photos.set(lieu.titre.toLowerCase(), lieu.image);
+  }
+  const photoSecours = lieuxPopulaires.find((l) => l.image)?.image ?? null;
+
+  // pour chaque étape du jour : son numéro (le même que sur la carte, donc on ne
+  // compte que celles qui ont une position) et le trajet jusqu'à la suivante
+  let compteur = 0;
+  const etapesAffichees = etapesDuJour.map((step, i) => {
+    const surCarte = step.latitude != null && step.longitude != null;
+    if (surCarte) compteur++;
+    const suivante = etapesDuJour[i + 1];
+    let trajet = null;
+    if (surCarte && suivante?.latitude != null && suivante?.longitude != null) {
+      const km = distanceKm(step, suivante);
+      trajet = { km, ...trajetEstime(km) };
+    }
+    return { step, numero: surCarte ? compteur : "–", trajet };
+  });
+
   return (
     <>
-      {/* l'écran normal est caché à l'impression, c'est le bloc du bas qui s'imprime */}
-      <div className="space-y-6 print:hidden">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-rose-400 hover:text-rose-300 transition"
-        >
-          <ArrowLeft size={16} /> Retour à mes voyages
-        </Link>
+      {/* fond invisible quand le menu "..." est ouvert : un clic à côté le referme
+          (en dehors du header : .card a un backdrop-blur qui casserait le "fixed") */}
+      {menuOuvert && (
+        <button
+          type="button"
+          aria-label="Fermer le menu"
+          onClick={() => setMenuOuvert(false)}
+          className="fixed inset-0 z-[1050] cursor-default print:hidden"
+        />
+      )}
 
-        {/* fond invisible quand le menu "..." est ouvert : un clic à côté le referme
-            (en dehors du header : .card a un backdrop-blur qui casserait le "fixed") */}
-        {menuOuvert && (
-          <button
-            type="button"
-            aria-label="Fermer le menu"
-            onClick={() => setMenuOuvert(false)}
-            className="fixed inset-0 z-[1050] cursor-default"
-          />
-        )}
+      {/* mise en page façon Wanderlog. Sur grand écran : 2 colonnes, le contenu à
+          gauche et la carte à droite sur toute la hauteur (elle reste en place
+          quand on scrolle). Sur mobile : tout en colonne, la carte entre l'en-tête
+          et le planning (pour pouvoir cliquer dessus en ajoutant une étape) */}
+      <div className="print:hidden lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(380px,45%)] lg:grid-rows-[auto_1fr]">
+        {/* --- en-tête : photo + carte du titre qui chevauche la photo --- */}
+        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+          <div className="relative">
+            <CouvertureVoyage destination={trip.destination} imageSecours={photoSecours} />
+            <Link
+              to="/"
+              className="absolute left-4 top-4 sm:left-8 inline-flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-black/60"
+            >
+              <ArrowLeft size={16} /> Mes voyages
+            </Link>
+          </div>
 
-        {/* en-tête du voyage (pas d'overflow-hidden sinon le menu est coupé).
-            z-index seulement menu ouvert, pour passer au-dessus de la carte Leaflet */}
-        <header className={`card relative ${menuOuvert ? "z-[1100]" : ""}`}>
-          <div className="rounded-3xl bg-gradient-to-br from-rose-500/15 via-slate-900 to-slate-900 p-5 sm:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 break-words">{trip.titre}</h1>
+          <div className="mx-auto max-w-3xl px-4 sm:px-8">
+            {/* pas d'overflow-hidden sinon le menu est coupé. z-index plus haut
+                menu ouvert, pour passer au-dessus de la carte Leaflet.
+                bg-slate-900 plein : sinon la photo se voit à travers la carte */}
+            <header
+              className={`card relative -mt-16 sm:-mt-20 bg-slate-900 p-5 sm:p-6 ${menuOuvert ? "z-[1100]" : "z-10"}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <h1 className="min-w-0 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-100 break-words">
+                  {trip.titre}
+                </h1>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <Link to={`/trips/${id}/edit`} className="btn-secondary px-3" aria-label="Modifier le voyage">
+                    <Pencil size={16} />
+                    <span className="hidden sm:inline">Modifier</span>
+                  </Link>
+
+                  {/* actions secondaires rangées dans un petit menu */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setMenuOuvert(!menuOuvert)}
+                      aria-label="Plus d'actions"
+                      aria-expanded={menuOuvert}
+                      className="btn-secondary px-3"
+                    >
+                      <MoreHorizontal size={18} />
+                    </button>
+
+                    {menuOuvert && (
+                      <div className="absolute right-0 z-10 mt-2 w-52 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 py-1 shadow-xl">
+                        <button
+                          type="button"
+                          onClick={handleDupliquer}
+                          disabled={duplicationEnCours}
+                          className={CLASSE_ITEM_MENU}
+                        >
+                          <Copy size={16} /> {duplicationEnCours ? "Copie..." : "Dupliquer"}
+                        </button>
+                        <button type="button" onClick={handleImprimer} className={CLASSE_ITEM_MENU}>
+                          <Printer size={16} /> Imprimer
+                        </button>
+                        <button type="button" onClick={handleCopierLien} className={CLASSE_ITEM_MENU}>
+                          <Link2 size={16} /> Copier le lien
+                        </button>
+                        <div className="my-1 border-t border-slate-800" />
+                        <button
+                          type="button"
+                          onClick={handleDelete}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-400 transition hover:bg-red-500/10"
+                        >
+                          <Trash2 size={16} /> Supprimer
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-400">
                 {trip.destination && (
-                  <p className="mt-1 flex items-center gap-1.5 text-slate-300">
+                  <span className="inline-flex items-center gap-1.5 text-slate-300">
                     <MapPin size={16} className="text-rose-400 shrink-0" />
                     {trip.destination}
-                  </p>
+                  </span>
                 )}
-                <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-400">
+                <span className="inline-flex items-center gap-1.5">
                   <CalendarDays size={16} className="shrink-0" />
                   {formatDate(trip.date_debut)} → {formatDate(trip.date_fin)}
-                  <span className="text-slate-500">· {nbJours} jour{nbJours > 1 ? "s" : ""}</span>
-                  <span className="inline-flex items-center gap-1 text-slate-500">
-                    · <Users size={14} className="shrink-0" /> {nbVoyageurs} voyageur{nbVoyageurs > 1 ? "s" : ""}
-                  </span>
-                </p>
-                <p
-                  className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                  <span className="text-slate-500">· {nbJours} j</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Users size={16} className="shrink-0" />
+                  {nbVoyageurs} voyageur{nbVoyageurs > 1 ? "s" : ""}
+                </span>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
                     rebours === "Terminé"
                       ? "bg-slate-800 text-slate-400"
                       : "bg-gradient-to-r from-rose-500/20 to-violet-500/20 text-rose-300"
                   }`}
                 >
                   <Hourglass size={14} /> {rebours}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                </span>
                 {lienCopie && (
-                  <span className="inline-flex items-center gap-1 text-sm text-emerald-400">
-                    <Check size={16} /> Lien copié !
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
+                    <Check size={14} /> Lien copié !
                   </span>
                 )}
-                <Link to={`/trips/${id}/edit`} className="btn-secondary">
-                  <Pencil size={16} /> Modifier
-                </Link>
-
-                {/* actions secondaires rangées dans un petit menu */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setMenuOuvert(!menuOuvert)}
-                    aria-label="Plus d'actions"
-                    aria-expanded={menuOuvert}
-                    className="btn-secondary"
-                  >
-                    <MoreHorizontal size={18} />
-                  </button>
-
-                  {menuOuvert && (
-                    <div className="absolute right-0 z-10 mt-2 w-52 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 py-1 shadow-xl">
-                      <button
-                        type="button"
-                        onClick={handleDupliquer}
-                        disabled={duplicationEnCours}
-                        className={CLASSE_ITEM_MENU}
-                      >
-                        <Copy size={16} /> {duplicationEnCours ? "Copie..." : "Dupliquer"}
-                      </button>
-                      <button type="button" onClick={handleImprimer} className={CLASSE_ITEM_MENU}>
-                        <Printer size={16} /> Imprimer
-                      </button>
-                      <button type="button" onClick={handleCopierLien} className={CLASSE_ITEM_MENU}>
-                        <Link2 size={16} /> Copier le lien
-                      </button>
-                      <div className="my-1 border-t border-slate-800" />
-                      <button
-                        type="button"
-                        onClick={handleDelete}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-400 transition hover:bg-red-500/10"
-                      >
-                        <Trash2 size={16} /> Supprimer
-                      </button>
-                    </div>
-                  )}
-                </div>
               </div>
-            </div>
 
-            <div className="mt-4 max-w-xl">
-              <BudgetBar depense={totalDepense} budget={trip.budget_total} />
-            </div>
+              <div className="mt-5 border-t border-slate-800 pt-4">
+                <BudgetBar depense={totalDepense} budget={trip.budget_total} />
+              </div>
+            </header>
           </div>
-        </header>
+        </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-          {/* colonne gauche : onglets + contenu */}
-          <div className="min-w-0 space-y-6">
-            <div role="tablist" className="flex gap-1 rounded-2xl border border-slate-800 bg-slate-900 p-1">
+        {/* --- la carte : à droite sur grand écran, sous l'en-tête sur mobile --- */}
+        <aside className="px-4 pt-6 sm:px-8 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:p-0">
+          <div className="lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)]">
+            <TripMap
+              steps={trip.steps}
+              jours={jours}
+              jourActif={jourActif}
+              centreDestination={centreDestination}
+              photos={photos}
+              suggestions={onglet === "explorer" ? lieux || [] : []}
+              suggestionSurvolee={suggestionSurvolee}
+              onAjouterSuggestion={ajouterDepuisExplorer}
+              onMapClick={handleMapClick}
+              pointChoisi={pointChoisi}
+              className="h-[300px] sm:h-[380px] lg:h-full lg:rounded-none lg:border-y-0 lg:border-r-0 lg:shadow-none"
+            />
+          </div>
+        </aside>
+
+        {/* --- le contenu : onglets + planning / explorer / budget --- */}
+        <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+          <div className="mx-auto max-w-3xl px-4 pb-12 sm:px-8">
+            {/* onglets soulignés, collés sous la navbar quand on descend */}
+            <div
+              role="tablist"
+              className="sticky top-16 z-20 -mx-4 mt-6 flex gap-6 border-b border-slate-800 bg-[var(--fond-page)]/90 px-4 backdrop-blur sm:-mx-8 sm:px-8"
+            >
               {ONGLETS.map(({ id: idOnglet, label, icone: Icone }) => {
                 const estActif = onglet === idOnglet;
                 return (
@@ -498,151 +546,142 @@ export default function TripDetail() {
                     role="tab"
                     aria-selected={estActif}
                     onClick={() => setOnglet(idOnglet)}
-                    className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition ${
-                      estActif ? "bg-rose-500 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                    className={`-mb-px flex items-center gap-2 border-b-2 py-3 text-sm font-semibold transition ${
+                      estActif
+                        ? "border-rose-500 text-slate-100"
+                        : "border-transparent text-slate-500 hover:text-slate-300"
                     }`}
                   >
-                    <Icone size={16} />
+                    <Icone size={16} className={estActif ? "text-rose-400" : ""} />
                     {label}
                   </button>
                 );
               })}
             </div>
 
-            {onglet === "planning" && (
-              <div className="space-y-6">
-                {/* barre des jours : seule elle scrolle horizontalement */}
-                <nav className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
-                  {jours.map((jour, index) => {
-                    const estActif = jour === jourActif;
-                    const nbEtapes = trip.steps.filter((s) => s.jour === jour).length;
-                    return (
-                      <button
-                        key={jour}
-                        type="button"
-                        onClick={() => setJourChoisi(jour)}
-                        className={`shrink-0 rounded-xl border px-3 py-2 text-left transition ${
-                          estActif
-                            ? "border-rose-500 bg-rose-500/10 text-slate-100"
-                            : "border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-700"
-                        }`}
-                      >
-                        <span className="flex items-center gap-2 text-sm font-semibold">
-                          Jour {index + 1}
-                          {nbEtapes > 0 && (
-                            <span
-                              className={`rounded-full px-1.5 text-xs ${
-                                estActif ? "bg-rose-500 text-white" : "bg-slate-800 text-slate-300"
-                              }`}
-                            >
-                              {nbEtapes}
-                            </span>
-                          )}
+            <div className="pt-6">
+              {onglet === "planning" && (
+                <div className="space-y-6">
+                  {/* barre des jours : seule elle scrolle horizontalement */}
+                  <nav className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+                    {jours.map((jour, index) => {
+                      const estActif = jour === jourActif;
+                      const nbEtapes = trip.steps.filter((s) => s.jour === jour).length;
+                      return (
+                        <button
+                          key={jour}
+                          type="button"
+                          onClick={() => setJourChoisi(jour)}
+                          className={`shrink-0 rounded-2xl border px-3.5 py-2 text-left transition ${
+                            estActif
+                              ? "border-rose-500 bg-rose-500/10 text-slate-100"
+                              : "border-slate-800 bg-slate-900/60 text-slate-400 hover:border-slate-700"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2 text-sm font-semibold">
+                            {/* pastille = la couleur du jour sur la carte */}
+                            <span className="h-2.5 w-2.5 rounded-full" style={{ background: couleurJour(index) }} />
+                            Jour {index + 1}
+                            {nbEtapes > 0 && (
+                              <span
+                                className={`rounded-full px-1.5 text-xs ${
+                                  estActif ? "bg-rose-500 text-white" : "bg-slate-800 text-slate-300"
+                                }`}
+                              >
+                                {nbEtapes}
+                              </span>
+                            )}
+                          </span>
+                          <span className="block text-xs text-slate-500">{formatJourCourt(jour)}</span>
+                        </button>
+                      );
+                    })}
+                  </nav>
+
+                  <section>
+                    <div className="mb-4 flex items-baseline justify-between gap-3">
+                      <h2 className="text-xl font-bold capitalize text-slate-100">
+                        {jourActif ? formatJourCourt(jourActif) : "Planning"}
+                      </h2>
+                      {totalDuJour > 0 && (
+                        <span className="text-sm text-slate-400">
+                          Sous-total : <span className="font-semibold text-slate-200">{formatCHF(totalDuJour)}</span>
                         </span>
-                        <span className="block text-xs text-slate-500">{formatJourCourt(jour)}</span>
-                      </button>
-                    );
-                  })}
-                </nav>
+                      )}
+                    </div>
 
-                <section>
-                  <div className="mb-4 flex items-baseline justify-between gap-3">
-                    <h2 className="font-semibold text-slate-100">
-                      {jourActif ? formatJourCourt(jourActif) : "Planning"}
-                    </h2>
-                    {totalDuJour > 0 && (
-                      <span className="text-sm text-slate-400">
-                        Sous-total : <span className="font-semibold text-slate-200">{formatCHF(totalDuJour)}</span>
-                      </span>
+                    {etapesAffichees.length > 0 ? (
+                      <ol>
+                        {etapesAffichees.map(({ step, numero, trajet }) => (
+                          <StepItem
+                            key={step.id}
+                            step={step}
+                            numero={numero}
+                            trajet={trajet}
+                            couleur={couleurJour(jours.indexOf(jourActif))}
+                            image={photos.get((step.titre || "").toLowerCase()) ?? null}
+                            onDelete={handleDeleteStep}
+                            onEdit={commencerEdition}
+                            enEdition={step.id === idEnEdition}
+                          />
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="card p-4 text-slate-500 italic text-sm">
+                        Aucune étape prévue pour cette journée.
+                      </p>
                     )}
+
+                    {jourActif && (
+                      <button
+                        type="button"
+                        onClick={ajouterAuJour}
+                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-800 px-4 py-3 text-sm font-semibold text-slate-400 transition hover:border-rose-500/50 hover:text-rose-400"
+                      >
+                        <Plus size={16} /> Ajouter une étape à ce jour
+                      </button>
+                    )}
+                  </section>
+
+                  <div ref={formRef} className="scroll-mt-32">
+                    <StepForm
+                      step={{ ...newStep, jour: newStep.jour || jourActif }}
+                      onChange={setNewStep}
+                      onSubmit={handleSubmitStep}
+                      jours={jours}
+                      erreur={stepError}
+                      enCours={ajoutEnCours}
+                      modeEdition={idEnEdition !== null}
+                      onAnnuler={annulerEdition}
+                      centre={centreDestination}
+                      lieuxPopulaires={lieuxPopulaires}
+                    />
                   </div>
-
-                  {etapesDuJour.length > 0 ? (
-                    <ol>
-                      {etapesDuJour.map((step, index) => (
-                        <StepItem
-                          key={step.id}
-                          step={step}
-                          numero={index + 1}
-                          onDelete={handleDeleteStep}
-                          onEdit={commencerEdition}
-                          enEdition={step.id === idEnEdition}
-                        />
-                      ))}
-                    </ol>
-                  ) : (
-                    <p className="card p-4 text-slate-500 italic text-sm">
-                      Aucune étape prévue pour cette journée.
-                    </p>
-                  )}
-
-                  {jourActif && (
-                    <button
-                      type="button"
-                      onClick={ajouterAuJour}
-                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-800 px-4 py-3 text-sm font-semibold text-slate-400 transition hover:border-rose-500/50 hover:text-rose-400"
-                    >
-                      <Plus size={16} /> Ajouter une étape à ce jour
-                    </button>
-                  )}
-                </section>
-
-                <div ref={formRef} className="scroll-mt-24">
-                  <StepForm
-                    step={{ ...newStep, jour: newStep.jour || jourActif }}
-                    onChange={setNewStep}
-                    onSubmit={handleSubmitStep}
-                    jours={jours}
-                    erreur={stepError}
-                    enCours={ajoutEnCours}
-                    modeEdition={idEnEdition !== null}
-                    onAnnuler={annulerEdition}
-                    centre={centreDestination}
-                    lieuxPopulaires={lieuxPopulaires}
-                  />
                 </div>
-              </div>
-            )}
+              )}
 
-            {onglet === "explorer" &&
-              (centreDestination ? (
-                <ExplorePanel
-                  lieux={lieux}
-                  loading={lieuxLoading}
-                  error={lieuxError}
-                  onAjouter={ajouterDepuisExplorer}
-                  onSurvol={(lieu) => setSuggestionSurvolee(lieu ? lieu.id : null)}
-                  motCle={motCle}
-                  onRecherche={setMotCle}
-                />
-              ) : (
-                <p className="card p-4 text-sm text-slate-400">
-                  Ajoute une destination (Modifier) pour voir des suggestions.
-                </p>
-              ))}
+              {onglet === "explorer" &&
+                (centreDestination ? (
+                  <ExplorePanel
+                    lieux={lieux}
+                    loading={lieuxLoading}
+                    error={lieuxError}
+                    onAjouter={ajouterDepuisExplorer}
+                    onSurvol={(lieu) => setSuggestionSurvolee(lieu ? lieu.id : null)}
+                    motCle={motCle}
+                    onRecherche={setMotCle}
+                  />
+                ) : (
+                  <p className="card p-4 text-sm text-slate-400">
+                    Ajoute une destination (Modifier) pour voir des suggestions.
+                  </p>
+                ))}
 
-            {onglet === "budget" && <BudgetPanel trip={trip} steps={trip.steps} jours={jours} />}
-          </div>
-
-          {/* colonne droite : la carte (au-dessus du contenu sur mobile) */}
-          <aside className="order-first lg:order-none">
-            <div className="lg:sticky lg:top-20">
-              <TripMap
-                steps={trip.steps}
-                jourActif={jourActif}
-                centreDestination={centreDestination}
-                suggestions={onglet === "explorer" ? lieux || [] : []}
-                suggestionSurvolee={suggestionSurvolee}
-                onAjouterSuggestion={ajouterDepuisExplorer}
-                onMapClick={handleMapClick}
-                pointChoisi={pointChoisi}
-                className="h-[300px] sm:h-[360px] lg:h-[calc(100vh-7rem)]"
-              />
+              {onglet === "budget" && <BudgetPanel trip={trip} steps={trip.steps} jours={jours} />}
             </div>
-          </aside>
+          </div>
         </div>
       </div>
-
       {/* version imprimable : cachée à l'écran, tout l'itinéraire jour par jour */}
       <div className="hidden print:block bg-white text-black">
         <h1 className="text-2xl font-bold">{trip.titre}</h1>
